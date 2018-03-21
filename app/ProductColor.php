@@ -13,4 +13,11 @@ class ProductColor extends Model
      * @var string
      */
     protected $table = 'products_colors';
+
+     protected $guarded = [];
+
+    public function productColorSides()
+    {
+        return $this->hasMany(ProductColorSide::class);
+    }
 }

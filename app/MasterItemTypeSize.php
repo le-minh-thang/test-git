@@ -4,7 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MasterItemTypeSub extends Model
+class MasterItemTypeSize extends Model
 {
     protected $primaryKey = 'id'; // or null
     public $incrementing = false;
@@ -19,10 +19,5 @@ class MasterItemTypeSub extends Model
      *
      * @var string
      */
-    protected $table = 'master_item_type_sub';
-
-    public function itemSubSides()
-    {
-        return $this->hasMany(MasterItemTypeSubSide::class, 'color_id', 'id');
-    }
+    protected $table = 'master_item_type_size';
 }

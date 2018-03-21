@@ -14,27 +14,12 @@ use App\MasterItemType;
 use App\ProductColorSide;
 use Carbon\Carbon;
 
-class TestController extends Controller
+class InsertController extends Controller
 {
     private $_dateTime;
 
     public function __construct()
     {
-//        $product = Product::orderBy('id', 'desc')->first();
-//
-//        $dateOrder = \Carbon\Carbon::parse($product->updated_at);
-//        $now       = \Carbon\Carbon::now();
-//        print_r($now);
-//        dd($product->updated_at);
-//        $flag      = false;
-//        if ($dateOrder->diffInDays($now) <= 180) {
-//            $flag = true;
-//        }
-//        dd($flag);
-//        $dateOrder = Carbon::now()->subMonth();
-//        $now       = Carbon::now();
-//
-//        dd($dateOrder->diffInDays($now));
         $this->_dateTime = Carbon::now()->format('Y-m-d H:i:s');
     }
 
@@ -61,37 +46,42 @@ class TestController extends Controller
             $lastProductId      = Product::orderBy('id', 'desc')->first()->id + 1;
             $lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
 
-            $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')->pluck('title', 'code')->toArray();
+            $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
+//                ->whereNotIn('name', ['スマホリング（ハート型）', 'レザーキーホルダー（丸型）', 'レザーキーホルダー（四角型）', 'レザーキーホルダー（Tシャツ型）'])
+                ->pluck('title', 'code')->toArray();
             $products        = Product::select('title', 'code')->pluck('title', 'code')->toArray();
             $diffs           = array_diff_assoc($masterItemTypes, $products);
 
-            var_dump("generate a product...");
             foreach ($diffs as $code => $name) {
-                $item             = MasterItemType::with('itemSubs', 'itemSubs.itemSubSizes', 'printtyProduct', 'printtyProductColors', 'printtyProductColorSides', 'printtyProductSizes')->where('name', $name)->where('item_code', $code)->first();
+                $item = MasterItemType::with('itemSubs', 'itemSizes', 'itemSubs.itemSubSides', 'printtyProduct', 'printtyProductColors', 'printtyProductColorSides', 'printtyProductSizes')
+                    ->where('name', $name)
+                    ->where('item_code', $code)
+                    ->first();
+
                 $productInserts[] = $this->generateProduct($item, $lastProductId);
-                var_dump("generate a product $lastProductId");
-                $productSizeInserts = $this->generateProductSizes($productSizeInserts, $lastProductId);
+                var_dump("generate the product $lastProductId");
+                $this->generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes);
 
-                if (!emtpy($item->printtyProduct)) {
-                    $printtyProductInserts[] = $this->_generatePrinttyProduct($item->printtyProduct);
-                }
+//                if (!emtpy($item->printtyProduct)) {
+//                    $printtyProductInserts[] = $this->_generatePrinttyProduct($item->printtyProduct);
+//                }
 
-                if (!emtpy($item->printtyProductSizes)) {
-                    $this->_generatePrinttyProductSizes($item->printtyProductSizes, $printtyProductSizeInserts);
-                }
+//                if (!emtpy($item->printtyProductSizes)) {
+//                    $this->_generatePrinttyProductSizes($item->printtyProductSizes, $printtyProductSizeInserts);
+//                }
 
-                if (!emtpy($item->printtyProductColors)) {
-                    $this->_generatePrinttyProductColors($item->printtyProductColors, $printtyProductColorInserts);
-                }
+//                if (!emtpy($item->printtyProductColors)) {
+//                    $this->_generatePrinttyProductColors($item->printtyProductColors, $printtyProductColorInserts);
+//                }
 
-                if (!emtpy($item->printtyProductColorSides)) {
-                    $this->_generatePrinttyProductColorSides($item->printtyProductColorSides, $printtyProductColorSideInserts);
-                }
+//                if (!emtpy($item->printtyProductColorSides)) {
+//                    $this->_generatePrinttyProductColorSides($item->printtyProductColorSides, $printtyProductColorSideInserts);
+//                }
 
                 foreach ($item->itemSubs as $itemSub) {
                     $productColorInserts[] = $this->generateProductColors($itemSub, $lastProductId, $lastProductColorId);
-                    foreach ($itemSub->itemSubSizes as $itemSubSize) {
-                        $productColorSideInserts[] = $this->generateProductColorSides($itemSubSize, $lastProductColorId, $itemSub);
+                    foreach ($itemSub->itemSubSides as $itemSubSide) {
+                        $productColorSideInserts[] = $this->generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub);
                     }
 
                     $lastProductColorId += 1;
@@ -100,17 +90,6 @@ class TestController extends Controller
                 $lastProductId += 1;
             }
 
-            var_dump("$printtyProductInserts");
-            var_dump($printtyProductInserts);
-            var_dump("$printtyProductSizeInserts");
-            var_dump($printtyProductSizeInserts);
-            var_dump("$printtyProductSizeInserts");
-            var_dump($printtyProductSizeInserts);
-            var_dump("$printtyProductColorInserts");
-            var_dump($printtyProductColorInserts);
-            var_dump("$printtyProductColorSideInserts");
-            var_dump($printtyProductColorSideInserts);
-
             DB::beginTransaction();
             var_dump("inserting ...");
             Product::insert($productInserts);
@@ -118,10 +97,10 @@ class TestController extends Controller
             ProductColor::insert($productColorInserts);
             ProductColorSide::insert($productColorSideInserts);
             //
-            PrinttyProduct::insert($printtyProductInserts);
-            PrinttyProductSize::insert($printtyProductSizeInserts);
-            PrinttyProductColor::insert($printtyProductColorInserts);
-            PrinttyProductColorSide::insert($printtyProductColorSideInserts);
+//            PrinttyProduct::insert($printtyProductInserts);
+//            PrinttyProductSize::insert($printtyProductSizeInserts);
+//            PrinttyProductColor::insert($printtyProductColorInserts);
+//            PrinttyProductColorSide::insert($printtyProductColorSideInserts);
 
             DB::commit();
             dd('done');
@@ -188,42 +167,73 @@ class TestController extends Controller
         ];
     }
 
-    private function generateProductColorSides($itemSubSize, $lastProductColorId, $itemSub)
+    private function generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub)
     {
         $order = null;
-        if ($itemSubSize->title == '表' || $itemSubSize->title == '表裏同じ') {
-            $print_price = $itemSub->cost1;
-            $order       = 1;
-        } else if ($itemSubSize->title == '裏') {
-            $print_price = $itemSub->cost2;
-            $order       = 2;
+        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF') {
+            if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
+//                $print_price = 0;
+                $print_price = $itemSub->cost1;
+                $order = 1;
+            } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
+                $print_price = $itemSub->cost2;
+                $order       = 2;
+            } else {
+                $print_price = $itemSub->cost3;
+                if ($itemSubSide->title == '左袖') {
+                    $order = 3;
+                } else if ($itemSubSide->title == '右袖') {
+                    $order = 4;
+                }
+            }
         } else {
-            $print_price = $itemSub->cost3;
-            if ($itemSubSize->title == '左袖') {
-                $order = 3;
-            } else if ($itemSubSize->title == '右袖') {
-                $order = 4;
+            if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
+//                $print_price = 0;
+                $print_price = $itemSub->cost1;
+                $order = 1;
+            } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
+                $print_price = $itemSub->cost2;
+                $order       = 2;
+            } else {
+                $print_price = $itemSub->cost3;
+                if ($itemSubSide->title == '左袖') {
+                    $order = 3;
+                } else if ($itemSubSide->title == '右袖') {
+                    $order = 4;
+                }
             }
         }
+
+        if ($itemSubSide->state == 1) {
+            $delete = 0;
+        } else {
+            $delete = 1;
+        }
+
         return [
-            'title'            => $itemSubSize->title,
+            'title'            => $itemSubSide->title,
             'product_color_id' => $lastProductColorId,
-            'is_main'          => $itemSubSize->is_main,
-            'content'          => $itemSubSize->content,
-            'image_url'        => $itemSubSize->image_url,
-            'preview_url'      => $itemSubSize->preview_url,
+            'is_main'          => $itemSubSide->is_main,
+            'content'          => $itemSubSide->content,
+            'image_url'        => $itemSubSide->image_url,
+            'preview_url'      => $itemSubSide->preview_url,
             'print_price'      => $print_price,
-            'is_deleted'       => 0,
+            'is_deleted'       => $delete,
             'order'            => $order,
-            'created_at'       => $itemSubSize->created,
-            'updated_at'       => $itemSubSize->modified,
-            'content_print'    => $itemSubSize->content_print,
+            'created_at'       => $itemSubSide->created,
+            'updated_at'       => $itemSubSide->modified,
+            'content_print'    => $itemSubSide->content_print,
         ];
     }
 
 
     private function generateProductColors($itemSub, $lastProductId, $lastProductColorId)
     {
+        if ($itemSub->state == 1) {
+            $delete = 0;
+        } else {
+            $delete = 1;
+        }
         return [
             'id'         => $lastProductColorId,
             'title'      => $itemSub->name,
@@ -231,7 +241,7 @@ class TestController extends Controller
             'code'       => $itemSub->item_code,
             'product_id' => $lastProductId,
             'is_main'    => $itemSub->is_main,
-            'is_deleted' => 0,
+            'is_deleted' => $delete,
             'created_at' => $itemSub->created,
             'updated_at' => $itemSub->modified,
         ];
@@ -239,61 +249,59 @@ class TestController extends Controller
 
     private function generateProduct($item, $lastProductId)
     {
+        if ($item->state == 1) {
+            $delete = 0;
+        } else {
+            $delete = 1;
+        }
+
+        // delete
+        if ($item->name == 'スマホリング（ハート型）') {
+            $price = $toolPrice = 750;
+        } else {
+            $price = $toolPrice = 600;
+        }
+
         return [
             'id'               => $lastProductId,
             'category_id'      => $item->category_id,
             'title'            => $item->name,
             'code'             => $item->item_code,
+//            'price'            => $price,
             'price'            => $item->item_price,
             'is_main'          => $item->is_main,
-            'is_deleted'       => 0,
+            'is_deleted'       => $delete,
             'order'            => $item->order,
             'created_at'       => $item->created,
             'updated_at'       => $item->modified,
+            //            'tool_price'       => $toolPrice,
             'tool_price'       => $item->tool_price,
             'color_total'      => $item->color_total,
             'size'             => $item->size,
             'sale_price'       => $item->sale_price,
-            'item_code_nomial' => $item->item_code_nomial,
+            'item_code_nomial' => $item->item_code_nominal,
             'material'         => $item->material,
             'maker'            => $item->maker,
         ];
     }
 
-    private function generateProductSizes($productSizeInserts, $lastProductId)
-    {
-        $sizes = [
-            '100',
-            '110',
-            '120',
-            '130',
-            '140',
-            '150',
-            '160',
-            'WS',
-            'WM',
-            'WL',
-            'S',
-            'M',
-            'L',
-            'XL',
-            'XXL',
-            'XXXL',
-        ];
 
-        $isFirst = true;
-        foreach ($sizes as $size) {
+    private function generateProductSizes(&$productSizeInserts, $lastProductId, $itemSizes)
+    {
+        foreach ($itemSizes as $itemSize) {
+            if ($itemSize->state == 1) {
+                $delete = 0;
+            } else {
+                $delete = 1;
+            }
             $productSizeInserts[] = [
                 'product_id' => $lastProductId,
-                'title'      => $size,
-                'is_main'    => $isFirst ? 1 : 0,
-                'is_deleted' => 0,
-                'created_at' => $this->_dateTime,
-                'updated_at' => $this->_dateTime,
+                'title'      => $itemSize->name,
+                'is_main'    => $itemSize->is_main,
+                'is_deleted' => $delete,
+                'created_at' => $itemSize->created,
+                'updated_at' => $itemSize->modified,
             ];
-            $isFirst              = false;
         }
-
-        return $productSizeInserts;
     }
 }

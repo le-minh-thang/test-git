@@ -13,4 +13,17 @@ class Product extends Model
      * @var string
      */
     protected $table = 'products';
+
+     protected $guarded = [];
+
+    public function productSizes()
+    {
+        return $this->hasMany(ProductSize::class);
+    }
+
+    public function productColors()
+    {
+        return $this->hasMany(ProductColor::class);
+    }
+
 }

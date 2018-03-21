@@ -21,6 +21,11 @@ class MasterItemType extends Model
      */
     protected $table = 'master_item_type';
 
+    public function itemSizes()
+    {
+        return $this->hasMany(MasterItemTypeSize::class, 'item_type', 'id');
+    }
+
     public function itemSubs()
     {
         return $this->hasMany(MasterItemTypeSub::class, 'item_type', 'id');

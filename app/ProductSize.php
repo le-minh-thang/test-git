@@ -12,4 +12,6 @@ class ProductSize extends Model
      * @var string
      */
     protected $table = 'products_sizes';
+
+     protected $guarded = [];
 }

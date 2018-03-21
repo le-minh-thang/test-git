@@ -4,7 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MasterItemTypeSubSize extends Model
+class MasterItemTypeSubSide extends Model
 {
     protected $primaryKey = 'id'; // or null
     public $incrementing = false;

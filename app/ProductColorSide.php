@@ -13,4 +13,6 @@ class ProductColorSide extends Model
      * @var string
      */
     protected $table = 'products_colors_sides';
+
+     protected $guarded = [];
 }

@@ -15,4 +15,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('test', 'TestController@index')->name('test');
+Route::get('insert', 'InsertController@index')->name('insert');
+Route::get('update', 'UpdateController@index')->name('update');
+Route::get('update-budget-product', 'UpdateBudgetItemController@index')->name('update');
