@@ -18,3 +18,4 @@ Route::get('/', function () {
 Route::get('insert', 'InsertController@index')->name('insert');
 Route::get('update', 'UpdateController@index')->name('update');
 Route::get('update-budget-product', 'UpdateBudgetItemController@index')->name('update');
+Route::get('diff-items', 'DiffShowItemController@index')->name('DiffShowItem');

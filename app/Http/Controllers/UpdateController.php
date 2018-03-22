@@ -191,6 +191,32 @@ class UpdateController extends Controller
 
     private function updateProduct($item, $product)
     {
+        //    up t category -> budget category
+        //    22 -> 24
+        //    23 -> 25
+        //    24 -> 26
+        //    25 -> 27
+        //    26 -> 28
+        //    27 -> 22
+        //    28 -> 23
+        if ($item->category_id == 22) {
+            $category = 24;
+        } else if ($item->category_id == 23) {
+            $category = 25;
+        } else if ($item->category_id == 24) {
+            $category = 26;
+        } else if ($item->category_id == 25) {
+            $category = 27;
+        } else if ($item->category_id == 26) {
+            $category = 28;
+        } else if ($item->category_id == 27) {
+            $category = 22;
+        } else if ($item->category_id == 28) {
+            $category = 23;
+        } else {
+            $category = $item->category_id;
+        }
+
         if ($product->title == '定番スウェットパンツ') {
             $price     = 2500;
             $toolPrice = 3500;
@@ -200,7 +226,7 @@ class UpdateController extends Controller
         }
 
         $data = [
-            'category_id'      => $item->category_id,
+            'category_id'      => $category,
             'title'            => $item->name,
             'code'             => $item->item_code,
             'price'            => $price,

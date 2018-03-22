@@ -174,7 +174,7 @@ class InsertController extends Controller
             if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
 //                $print_price = 0;
                 $print_price = $itemSub->cost1;
-                $order = 1;
+                $order       = 1;
             } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
                 $print_price = $itemSub->cost2;
                 $order       = 2;
@@ -190,7 +190,7 @@ class InsertController extends Controller
             if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
 //                $print_price = 0;
                 $print_price = $itemSub->cost1;
-                $order = 1;
+                $order       = 1;
             } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
                 $print_price = $itemSub->cost2;
                 $order       = 2;
@@ -255,19 +255,45 @@ class InsertController extends Controller
             $delete = 1;
         }
 
-        // delete
-        if ($item->name == 'スマホリング（ハート型）') {
-            $price = $toolPrice = 750;
+        //    up t category -> budget category
+        //    22 -> 24
+        //    23 -> 25
+        //    24 -> 26
+        //    25 -> 27
+        //    26 -> 28
+        //    27 -> 22
+        //    28 -> 23
+        if ($item->category_id == 22) {
+            $category = 24;
+        } else if ($item->category_id == 23) {
+            $category = 25;
+        } else if ($item->category_id == 24) {
+            $category = 26;
+        } else if ($item->category_id == 25) {
+            $category = 27;
+        } else if ($item->category_id == 26) {
+            $category = 28;
+        } else if ($item->category_id == 27) {
+            $category = 22;
+        } else if ($item->category_id == 28) {
+            $category = 23;
         } else {
-            $price = $toolPrice = 600;
+            $category = $item->category_id;
         }
+
+        // delete
+//        if ($item->name == 'スマホリング（ハート型）') {
+//            $price = $toolPrice = 750;
+//        } else {
+//            $price = $toolPrice = 600;
+//        }
 
         return [
             'id'               => $lastProductId,
-            'category_id'      => $item->category_id,
+            'category_id'      => $category,
             'title'            => $item->name,
             'code'             => $item->item_code,
-//            'price'            => $price,
+            //            'price'            => $price,
             'price'            => $item->item_price,
             'is_main'          => $item->is_main,
             'is_deleted'       => $delete,
