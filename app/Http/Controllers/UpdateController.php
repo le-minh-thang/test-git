@@ -21,7 +21,7 @@ class UpdateController extends Controller
 
     public function __construct()
     {
-        $this->_dateTime     = Carbon::now()->format('Y-m-d H:i:s');
+        $this->_dateTime           = Carbon::now()->format('Y-m-d H:i:s');
         $this->_lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
     }
 
@@ -224,6 +224,9 @@ class UpdateController extends Controller
             $price     = 1800;
             $toolPrice = 2800;
         }
+
+        $price     = $item->item_price;
+        $toolPrice = $item->tool_price;
 
         $data = [
             'category_id'      => $category,
