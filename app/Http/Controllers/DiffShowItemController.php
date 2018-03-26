@@ -154,4 +154,75 @@ class DiffShowItemController extends Controller
             ];
         }
     }
+
+    /**
+     * Get diff products
+     */
+    public function diffProducts()
+    {
+        $data = Input::all();
+        if (isset($data['product_ids'], $data['category_id'])) {
+            $products            = Product::where('category_id', $data['category_id'])
+                ->select('id', 'title')
+                ->orderBy('id')
+                ->pluck('title', 'id')->toArray();
+            $data['product_ids'] = explode(',', str_replace(" ", '', str_replace("'", '', $data['product_ids'])));
+
+            $productIds = array_keys($products);
+            var_dump("count products: " . count($productIds));
+            var_dump("count products input: " . count($data['product_ids']));
+            $diff = array_diff($productIds, $data['product_ids']);
+            var_dump($diff);
+            $diffWithtile = [];
+            if ($diff) {
+                foreach ($diff as $id) {
+                    $diffWithtile[$id] = $products[$id];
+                }
+            }
+            var_dump('title: ');
+            var_dump($diffWithtile);
+            var_dump(sprintf('count diff: %s', count($diff)));
+            var_dump($productIds);
+            var_dump($data['product_ids']);
+        } else {
+            var_dump('Error');
+        }
+    }
+
+    /**
+     * Get diff products
+     */
+    public function shortDiffProducts()
+    {
+        dd('chưa dùng');
+        $input = Input::all();
+        if (isset($input['data'])) {
+            $input = explode(':', $input['data']);
+            $input['product_ids'] = explode(',', str_replace(" ", '', str_replace("'", '', $input['product_ids'])));
+            $products            = Product::where('category_id', $input['category_id'])
+                ->select('id', 'title')
+                ->orderBy('id')
+                ->pluck('title', 'id')->toArray();
+
+
+            $productIds = array_keys($products);
+            var_dump("count products: " . count($productIds));
+            var_dump("count products input: " . count($input['product_ids']));
+            $diff = array_diff($productIds, $input['product_ids']);
+            var_dump($diff);
+            $diffWithtile = [];
+            if ($diff) {
+                foreach ($diff as $id) {
+                    $diffWithtile[$id] = $products[$id];
+                }
+            }
+            var_dump('title: ');
+            var_dump($diffWithtile);
+            var_dump(sprintf('count diff: %s', count($diff)));
+            var_dump($productIds);
+            var_dump($input['product_ids']);
+        } else {
+            var_dump('Error');
+        }
+    }
 }
