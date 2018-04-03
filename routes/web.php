@@ -22,3 +22,5 @@ Route::get('diff-items', 'DiffShowItemController@index')->name('DiffShowItem');
 Route::get('update-delete-field', 'DiffShowItemController@updateDeleteField')->name('UpdateDeleteField');
 Route::get('diff-product', 'DiffShowItemController@diffProducts')->name('DiffProduct');
 Route::get('short-diff-product', 'DiffShowItemController@shortDiffProducts')->name('ShortDiffProduct');
+Route::get('generate-data-for-import-wp', 'GenerateDataForImportWPController@index')->name('generateDataForImportWP');
+//Route::get('generate-product-for-import-wp', 'GenerateDataForImportWPController@generateProducts')->name('generateDataGenerateProductsImportWP');

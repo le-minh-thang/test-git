@@ -14,7 +14,7 @@ class Product extends Model
      */
     protected $table = 'products';
 
-     protected $guarded = [];
+    protected $guarded = [];
 
     public function productSizes()
     {

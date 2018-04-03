@@ -8,12 +8,7 @@ class PrinttyProduct extends Model
 {
     protected $primaryKey = 'id'; // or null
     public $incrementing = false;
-    /**
-     * The database name used by the model.
-     *
-     * @var string
-     */
-    protected $connection = 'mysql_other';
+    protected $guarded = [];
     /**
      * The database table used by the model.
      *

@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\PrinttyProduct;
-use App\PrinttyProductColor;
-use App\PrinttyProductColorSide;
-use App\PrinttyProductSize;
-use App\ProductSize;
 use DB;
 use App\Product;
+use Carbon\Carbon;
+use App\ProductSize;
 use App\ProductColor;
 use App\MasterItemType;
+use App\PrinttyProduct;
 use App\ProductColorSide;
-use Carbon\Carbon;
+use App\UpTPrinttyProduct;
+use App\PrinttyProductSize;
+use App\PrinttyProductColor;
+use App\UpTPrinttyProductSize;
+use App\UpTPrinttyProductColor;
+use App\PrinttyProductColorSide;
+use App\UpTPrinttyProductColorSide;
 
 class InsertController extends Controller
 {
@@ -42,6 +46,13 @@ class InsertController extends Controller
             $printtyProductSizeInserts      = [];
             $printtyProductColorInserts     = [];
             $printtyProductColorSideInserts = [];
+
+            $printtyProducts = [
+                'PrinttyProduct'          => 'UpTPrinttyProduct',
+                'PrinttyProductSize'      => 'UpTPrinttyProductSize',
+                'PrinttyProductColor'     => 'UpTPrinttyProductColor',
+                'PrinttyProductColorSide' => 'UpTPrinttyProductColorSide',
+            ];
 
             $lastProductId      = Product::orderBy('id', 'desc')->first()->id + 1;
             $lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
@@ -90,17 +101,32 @@ class InsertController extends Controller
                 $lastProductId += 1;
             }
 
+            // Insert printty product
+            foreach ($printtyProducts as $printtyProductTableName => $upTPrinttyProductTableName) {
+                $rinttyProductClass       = "\App\\{$printtyProductTableName}";
+                $upTPrinttyProductClass   = "\App\\{$upTPrinttyProductTableName}";
+                $printtyProductTableIds   = $rinttyProductClass::select('id')->pluck('id', 'id')->toArray();
+                $upTrinttyProductTableIds = $upTPrinttyProductClass::select('id')->pluck('id', 'id')->toArray();
+                $diffPrinttyProducts      = array_diff_assoc($upTrinttyProductTableIds, $printtyProductTableIds);
+                if (!empty($diffPrinttyProducts)) {
+                    ${lcfirst($printtyProductTableName) . 'Inserts'} = $upTPrinttyProductClass::whereIn('id', $diffPrinttyProducts)->get()->toArray();
+                }
+            }
+
             DB::beginTransaction();
+            if (!empty($printtyProducts)) {
+
+            }
             var_dump("inserting ...");
             Product::insert($productInserts);
             ProductSize::insert($productSizeInserts);
             ProductColor::insert($productColorInserts);
             ProductColorSide::insert($productColorSideInserts);
-            //
-//            PrinttyProduct::insert($printtyProductInserts);
-//            PrinttyProductSize::insert($printtyProductSizeInserts);
-//            PrinttyProductColor::insert($printtyProductColorInserts);
-//            PrinttyProductColorSide::insert($printtyProductColorSideInserts);
+            // Insert printty product
+            PrinttyProduct::insert($printtyProductInserts);
+            PrinttyProductSize::insert($printtyProductSizeInserts);
+            PrinttyProductColor::insert($printtyProductColorInserts);
+            PrinttyProductColorSide::insert($printtyProductColorSideInserts);
 
             DB::commit();
             dd('done');
