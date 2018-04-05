@@ -16,6 +16,7 @@ Route::get('/', function () {
 });
 
 Route::get('insert', 'InsertController@index')->name('insert');
+//Route::get('insert-from-printty', 'InsertController@insertFromPrintty')->name('insertFromPrintty');
 Route::get('update', 'UpdateController@index')->name('update');
 Route::get('update-budget-product', 'UpdateBudgetItemController@index')->name('updateOther');
 Route::get('diff-items', 'DiffShowItemController@index')->name('DiffShowItem');

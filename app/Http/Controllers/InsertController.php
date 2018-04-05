@@ -418,4 +418,112 @@ class InsertController extends Controller
 
         return $printPrice;
     }
+
+//    public function insertFromPrintty()
+//    {
+//        $printtyProductInserts          = [];
+//        $printtyProductSizeInserts      = [];
+//        $printtyProductColorInserts     = [];
+//        $printtyProductColorSideInserts = [];
+//
+//        $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id', 'products_linked_codes.code as product_code')
+//            ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
+//            ->where('products_linked_codes.is_deleted', 0)
+//            ->where('products.id', '>', 320)
+//            ->pluck('product_code', 'product.id')->toArray();
+//
+//        $printtyProducts = PrinttyProduct::select('id', 'product_code')->pluck('product_code', 'id')->toArray();
+//
+//        $diffs = array_diff_assoc($printtyPrinttyProducts, $printtyProducts);
+//
+//        if (count($diffs)) {
+//            $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id as id', 'products_linked_codes.code as product_code')
+//                ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
+//                ->where('products_linked_codes.is_deleted', 0)
+//                ->where('products.id', '>', 320)
+//                ->whereIn('products.id', array_flip($diffs))
+//                ->with([
+//                    'productSizes',
+//                    'productColors' => function ($q) {
+//                        $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors.id', 'products_colors.created_at', 'products_colors.updated_at')
+//                            ->with([
+//                                'productColorSides' => function ($q) {
+//                                    $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors_sides.id', 'products_colors_sides.created_at', 'products_colors_sides.updated_at')
+//                                        ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id ', '=', 'products_colors_sides.id');
+//                                },
+//                            ])
+//                            ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id', '=', 'products_colors .id');
+//                    },
+//                ])
+//                ->get();
+//            if ($printtyPrinttyProducts->count()) {
+//                foreach ($printtyPrinttyProducts as $printtyPrinttyProduct) {
+//                    $this->_generatePrinttyProduct($printtyPrinttyProduct, $printtyProductInserts);
+//                    if ($printtyPrinttyProduct->productSizes->count()) {
+//                        foreach ($printtyPrinttyProduct->productSizes as $printtyProductSize) {
+//                            $this->_generatePrinttyProductSize($printtyProductSize, $printtyProductSizeInserts, $printtyPrinttyProduct->product_code);
+//                        }
+//                    }
+//
+//                    if ($printtyPrinttyProduct->productColors->count()) {
+//                        foreach ($printtyPrinttyProduct->productColors as $printtyProductColor) {
+//                            $this->_generatePrinttyProductColor($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
+//
+//                            if ($printtyProductColor->productColorSides->count()) {
+//                                foreach ($printtyProductColor->productColorSides as $productColorSide) {
+//                                    $this->_generatePrinttyProductColorSide($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            } else {
+//                var_dump('Printty product is not found');
+//            }
+//        } else {
+//            var_dump('No diff');
+//        }
+//    }
+
+    private function _generatePrinttyProduct($printtyProduct, &$printtyProductInserts)
+    {
+        $printtyProductInserts[] = [
+            'id'                       => $printtyProduct->id,
+            'product_code'             => $printtyProduct->product_code,
+            'is_for_nekoposu_delivery' => 0,
+        ];
+    }
+
+    private function _generatePrinttyProductSize($printtyProductSize, &$printtyProductSizeInserts, $productCode)
+    {
+        $printtyProductSizeInserts[] = [
+            'id'           => $printtyProductSize->id,
+            'product_code' => $productCode,
+            'size_name'    => $printtyProductSize->title,
+            'created'      => $printtyProductSize->created_at,
+            'modified'     => $printtyProductSize->updated_at,
+        ];
+    }
+
+    private function _generatePrinttyProductColor($printtyProductColor, &$printtyProductColorInserts, $productCode)
+    {
+        $printtyProductColorInserts[] = [
+            'id'           => $printtyProductColor->id,
+            'product_code' => $productCode,
+            'size_name'    => $printtyProductColor->title,
+            'created'      => $printtyProductColor->created_at,
+            'modified'     => $printtyProductColor->updated_at,
+        ];
+    }
+
+    private function _generatePrinttyProductColorSide($printtyProductColorSide, &$printtyProductColorSideInserts, $productCode)
+    {
+        $printtyProductColorSideInserts[] = [
+            'id'           => $printtyProductColorSide->id,
+            'product_code' => $productCode,
+            'size_name'    => $printtyProductColorSide->title,
+            'created'      => $printtyProductColorSide->created_at,
+            'modified'     => $printtyProductColorSide->updated_at,
+        ];
+    }
 }
