@@ -58,11 +58,12 @@ class InsertController extends Controller
             $lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
 
             $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
-//                ->whereNotIn('name', ['スマホリング（ハート型）', 'レザーキーホルダー（丸型）', 'レザーキーホルダー（四角型）', 'レザーキーホルダー（Tシャツ型）'])
                 ->pluck('title', 'code')->toArray();
             $products        = Product::select('title', 'code')->pluck('title', 'code')->toArray();
             $diffs           = array_diff_assoc($masterItemTypes, $products);
 
+            $lastProductSizeOrder  = ProductSize::orderBy('order', 'desc')->first()->order + 1;
+            $lastProductColorOrder = ProductColor::orderBy('order', 'desc')->first()->order;
             foreach ($diffs as $code => $name) {
                 $item = MasterItemType::with('itemSubs', 'itemSizes', 'itemSubs.itemSubSides', 'printtyProduct', 'printtyProductColors', 'printtyProductColorSides', 'printtyProductSizes')
                     ->where('name', $name)
@@ -71,28 +72,12 @@ class InsertController extends Controller
 
                 $productInserts[] = $this->generateProduct($item, $lastProductId);
                 var_dump("generate the product $lastProductId");
-                $this->generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes);
-
-//                if (!emtpy($item->printtyProduct)) {
-//                    $printtyProductInserts[] = $this->_generatePrinttyProduct($item->printtyProduct);
-//                }
-
-//                if (!emtpy($item->printtyProductSizes)) {
-//                    $this->_generatePrinttyProductSizes($item->printtyProductSizes, $printtyProductSizeInserts);
-//                }
-
-//                if (!emtpy($item->printtyProductColors)) {
-//                    $this->_generatePrinttyProductColors($item->printtyProductColors, $printtyProductColorInserts);
-//                }
-
-//                if (!emtpy($item->printtyProductColorSides)) {
-//                    $this->_generatePrinttyProductColorSides($item->printtyProductColorSides, $printtyProductColorSideInserts);
-//                }
+                $this->generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes, $lastProductSizeOrder);
 
                 foreach ($item->itemSubs as $itemSub) {
-                    $productColorInserts[] = $this->generateProductColors($itemSub, $lastProductId, $lastProductColorId);
+                    $productColorInserts[] = $this->generateProductColors($itemSub, $lastProductId, $lastProductColorId, $lastProductColorOrder);
                     foreach ($itemSub->itemSubSides as $itemSubSide) {
-                        $productColorSideInserts[] = $this->generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub);
+                        $productColorSideInserts[] = $this->generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub, $item);
                     }
 
                     $lastProductColorId += 1;
@@ -114,10 +99,7 @@ class InsertController extends Controller
             }
 
             DB::beginTransaction();
-            if (!empty($printtyProducts)) {
 
-            }
-            var_dump("inserting ...");
             Product::insert($productInserts);
             ProductSize::insert($productSizeInserts);
             ProductColor::insert($productColorInserts);
@@ -137,97 +119,56 @@ class InsertController extends Controller
         }
     }
 
-
-    private function _generatePrinttyProductSizes($printtyProductSizes, &$printtyProductSizeInserts)
-    {
-        foreach ($printtyProductSizes as $printtyProductSize) {
-            $printtyProductSizeInserts[] = [
-                'id'           => $printtyProductSize->id,
-                'product_code' => $printtyProductSize->product_code,
-                'size_name'    => $printtyProductSize->size_name,
-                'modified'     => $printtyProductSize->modified,
-                'created'      => $printtyProductSize->created,
-            ];
-        }
-    }
-
-    private function _generatePrinttyProductColorSides($printtyProductColorSides, &$printtyProductColorInserts)
-    {
-        foreach ($printtyProductColorSides as $printtyProductColorSide) {
-            $printtyProductColorInserts[] = [
-                'id'                  => $printtyProductColorSide->id,
-                'product_code'        => $printtyProductColorSide->product_code,
-                'products_color_code' => $printtyProductColorSide->products_color_code,
-                'side_name'           => $printtyProductColorSide->side_name,
-                'print_width'         => $printtyProductColorSide->print_width,
-                'print_height'        => $printtyProductColorSide->print_height,
-                'modified'            => $printtyProductColorSide->modified,
-                'created'             => $printtyProductColorSide->created,
-            ];
-        }
-    }
-
-    private function _generatePrinttyProductColors($printtyProductColors, &$printtyProductColorInserts)
-    {
-        foreach ($printtyProductColors as $printtyProductColor) {
-            $printtyProductColorInserts[] = [
-                'id'                  => $printtyProductColor->id,
-                'product_code'        => $printtyProductColor->product_code,
-                'products_color_code' => $printtyProductColor->products_color_code,
-                'modified'            => $printtyProductColor->modified,
-                'created'             => $printtyProductColor->created,
-            ];
-        }
-    }
-
-    private function _generatePrinttyProduct($printtyProduct)
-    {
-        return [
-            'id'                       => $printtyProduct->id,
-            'product_code'             => $printtyProduct->product_code,
-            'is_for_nekoposu_delivery' => $printtyProduct->is_for_nekoposu_delivery,
-            'nekopos_quantity_count'   => $printtyProduct->nekopos_quantity_count,
-            'nekopos_weight'           => $printtyProduct->nekopos_weight,
-            'modified'                 => $printtyProduct->modified,
-            'created'                  => $printtyProduct->created,
-        ];
-    }
-
-    private function generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub)
+    private function generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub, $item)
     {
         $order = null;
         if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF') {
             if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
-//                $print_price = 0;
-                $print_price = $itemSub->cost1;
-                $order       = 1;
+                $printPriceCost = $itemSub->cost1;
+                $order          = 1;
             } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
-                $print_price = $itemSub->cost2;
-                $order       = 2;
+                $printPriceCost = $itemSub->cost2;
+                $order          = 2;
             } else {
-                $print_price = $itemSub->cost3;
+                $printPriceCost = $itemSub->cost3;
                 if ($itemSubSide->title == '左袖') {
                     $order = 3;
                 } else if ($itemSubSide->title == '右袖') {
                     $order = 4;
                 }
             }
+
+            // Get print price for the product
+            if (isset($order)) {
+                $orderPrice = $order;
+            } else {
+                $orderPrice = 6;
+            }
+
+            $printPriceCost = $this->_getPrintPrice($item, $orderPrice, $printPriceCost, true);
         } else {
             if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
-//                $print_price = 0;
-                $print_price = $itemSub->cost1;
-                $order       = 1;
+                $printPriceCost = $itemSub->cost1;
+                $order          = 1;
             } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
-                $print_price = $itemSub->cost2;
-                $order       = 2;
+                $printPriceCost = $itemSub->cost2;
+                $order          = 2;
             } else {
-                $print_price = $itemSub->cost3;
+                $printPriceCost = $itemSub->cost3;
                 if ($itemSubSide->title == '左袖') {
                     $order = 3;
                 } else if ($itemSubSide->title == '右袖') {
                     $order = 4;
                 }
             }
+
+            // Get print price for the product
+            if (isset($order)) {
+                $orderPrice = $order;
+            } else {
+                $orderPrice = 0;
+            }
+            $printPriceCost = $this->_getPrintPrice($item, $orderPrice, $printPriceCost);
         }
 
         if ($itemSubSide->state == 1) {
@@ -243,7 +184,7 @@ class InsertController extends Controller
             'content'          => $itemSubSide->content,
             'image_url'        => $itemSubSide->image_url,
             'preview_url'      => $itemSubSide->preview_url,
-            'print_price'      => $print_price,
+            'print_price'      => $printPriceCost,
             'is_deleted'       => $delete,
             'order'            => $order,
             'created_at'       => $itemSubSide->created,
@@ -253,13 +194,14 @@ class InsertController extends Controller
     }
 
 
-    private function generateProductColors($itemSub, $lastProductId, $lastProductColorId)
+    private function generateProductColors($itemSub, $lastProductId, $lastProductColorId, &$lastProductColorOrder)
     {
         if ($itemSub->state == 1) {
             $delete = 0;
         } else {
             $delete = 1;
         }
+        $lastProductColorOrder += 1;
         return [
             'id'         => $lastProductColorId,
             'title'      => $itemSub->name,
@@ -268,6 +210,7 @@ class InsertController extends Controller
             'product_id' => $lastProductId,
             'is_main'    => $itemSub->is_main,
             'is_deleted' => $delete,
+            'order'      => $lastProductColorOrder,
             'created_at' => $itemSub->created,
             'updated_at' => $itemSub->modified,
         ];
@@ -307,6 +250,31 @@ class InsertController extends Controller
             $category = $item->category_id;
         }
 
+        if ($item->name == '名刺ケース') {
+            $price = $toolPrice = 1800;
+        } else if ($item->name == 'コインケース' || $item->name == 'ライター') {
+            $price = $toolPrice = 1500;
+        } else if ($item->name == 'ワイヤレスバッテリー') {
+            $price = $toolPrice = 1580;
+        } else if ($item->name == 'ファインジャージーTシャツ' || $item->name == 'ファインジャージーTシャツ（ガールズ）') {
+            $price     = 1000;
+            $toolPrice = 1700;
+        } else if ($item->name == 'ドライカノコユーティリティーポロシャツ') {
+            $price     = 1400;
+            $toolPrice = 2100;
+        } else if ($item->name == 'Tシャツワンピース（ミニ丈）') {
+            $price     = 1400;
+            $toolPrice = 2400;
+        } else if ($item->name == 'ヘヴィーウェイトコットンポロシャツ') {
+            $price     = 1900;
+            $toolPrice = 2750;
+        } else if ($item->name == 'オックスフォードボタンダウンショートスリーブシャツ') {
+            $price     = 2500;
+            $toolPrice = 3200;
+        } else {
+            $price     = $item->item_price;
+            $toolPrice = $item->tool_price;
+        }
         // delete
 //        if ($item->name == 'スマホリング（ハート型）') {
 //            $price = $toolPrice = 750;
@@ -319,15 +287,15 @@ class InsertController extends Controller
             'category_id'      => $category,
             'title'            => $item->name,
             'code'             => $item->item_code,
-            //            'price'            => $price,
-            'price'            => $item->item_price,
+            'price'            => $price,
+            // 'price'         => $item->item_price,
             'is_main'          => $item->is_main,
             'is_deleted'       => $delete,
             'order'            => $item->order,
             'created_at'       => $item->created,
             'updated_at'       => $item->modified,
-            //            'tool_price'       => $toolPrice,
-            'tool_price'       => $item->tool_price,
+            'tool_price'       => $toolPrice,
+            // 'tool_price'    => $item->tool_price,
             'color_total'      => $item->color_total,
             'size'             => $item->size,
             'sale_price'       => $item->sale_price,
@@ -338,7 +306,7 @@ class InsertController extends Controller
     }
 
 
-    private function generateProductSizes(&$productSizeInserts, $lastProductId, $itemSizes)
+    private function generateProductSizes(&$productSizeInserts, $lastProductId, $itemSizes, &$lastProductSizeOrder)
     {
         foreach ($itemSizes as $itemSize) {
             if ($itemSize->state == 1) {
@@ -351,9 +319,103 @@ class InsertController extends Controller
                 'title'      => $itemSize->name,
                 'is_main'    => $itemSize->is_main,
                 'is_deleted' => $delete,
+                'code'       => $itemSize->item_code,
+                'order'      => $lastProductSizeOrder,
                 'created_at' => $itemSize->created,
                 'updated_at' => $itemSize->modified,
             ];
+            $lastProductSizeOrder += 1;
         }
+    }
+
+    private function _getPrintPrice($item, $order, $printPrice, $isWhite = false)
+    {
+        if ($item->name == '名刺ケース' || $item->name == 'コインケース' || $item->name == 'ワイヤレスバッテリー' || $item->name == 'ライター') {
+            $printPrice = 0;
+        }
+
+        if ($item->name == 'ファインジャージーTシャツ' || $item->name == 'ファインジャージーTシャツ（ガールズ）') {
+            if ($isWhite) {
+                if ($order == 1) {
+                    $printPrice = 700;
+                } else if ($order == 2) {
+                    $printPrice = 700;
+                } else {
+                    $printPrice = 450;
+                }
+            } else {
+                if ($order == 1) {
+                    $printPrice = 1000;
+                } else if ($order == 2) {
+                    $printPrice = 1000;
+                } else {
+                    $printPrice = 650;
+                }
+            }
+        } else if ($item->name == 'ドライカノコユーティリティーポロシャツ') {
+            if ($isWhite) {
+                if ($order == 1) {
+                    $printPrice = 700;
+                } else if ($order == 2) {
+                    $printPrice = 850;
+                } else {
+                    $printPrice = 500;
+                }
+            } else {
+                if ($order == 1) {
+                    $printPrice = 850;
+                } else if ($order == 2) {
+                    $printPrice = 1000;
+                } else {
+                    $printPrice = 700;
+                }
+            }
+        } else if ($item->name == 'Tシャツワンピース（ミニ丈）') {
+            if (!$isWhite) {
+                if ($order == 1) {
+                    $printPrice = 1000;
+                } else if ($order == 2) {
+                    $printPrice = 1000;
+                }
+            }
+        } else if ($item->name == 'ヘヴィーウェイトコットンポロシャツ') {
+            if ($isWhite) {
+                if ($order == 1) {
+                    $printPrice = 850;
+                } else if ($order == 2) {
+                    $printPrice = 1000;
+                } else {
+                    $printPrice = 700;
+                }
+            } else {
+                if ($order == 1) {
+                    $printPrice = 700;
+                } else if ($order == 2) {
+                    $printPrice = 850;
+                } else {
+                    $printPrice = 450;
+                }
+            }
+        } else if ($item->name == 'オックスフォードボタンダウンショートスリーブシャツ') {
+            if ($isWhite) {
+                if ($order == 1) {
+                    $printPrice = 700;
+                } else if ($order == 2) {
+                    $printPrice = 850;
+                } else {
+                    $printPrice = 450;
+                }
+            } else {
+                if ($order == 1) {
+                    $printPrice = 950;
+                } else if ($order == 2) {
+                    $printPrice = 1100;
+                } else {
+                    $printPrice = 800;
+                }
+            }
+        }
+
+        return $printPrice;
     }
 }
