@@ -18,6 +18,11 @@ class ProductColor extends Model
 
     public function productColorSides()
     {
-        return $this->hasMany(ProductColorSide::class);
+        return $this->hasMany(ProductColorSide::class)->where('is_deleted', 0)->orderBy('id', 'asc');;
+    }
+
+    public function productColorSideMain()
+    {
+        return $this->hasOne(ProductColorSide::class)->where('is_deleted', 0)->where('is_main', 1)->orderBy('id', 'asc');;
     }
 }

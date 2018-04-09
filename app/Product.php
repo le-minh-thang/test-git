@@ -23,7 +23,12 @@ class Product extends Model
 
     public function productColors()
     {
-        return $this->hasMany(ProductColor::class);
+        return $this->hasMany(ProductColor::class)->where('is_deleted', 0)->orderBy('id', 'asc');
+    }
+
+    public function productColorMain()
+    {
+        return $this->hasOne(ProductColor::class)->where('is_deleted', 0)->where('is_main', 1)->orderBy('id', 'asc');;
     }
 
 }
