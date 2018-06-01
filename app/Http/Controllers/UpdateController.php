@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\PrinttyProduct;
-use App\PrinttyProductColor;
-use App\PrinttyProductColorSide;
-use App\PrinttyProductSize;
 use App\ProductSize;
 use DB;
 use App\Product;
@@ -16,15 +12,6 @@ use Carbon\Carbon;
 
 class UpdateController extends Controller
 {
-    private $_dateTime;
-    private $_lastProductColorId;
-
-    public function __construct()
-    {
-        $this->_dateTime           = Carbon::now()->format('Y-m-d H:i:s');
-        $this->_lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
-    }
-
     /**
      * Display a listing of the resource.
      *
@@ -43,7 +30,7 @@ class UpdateController extends Controller
             $productColorSideInserts = [];
 
             $masterItemTypes = MasterItemType::with('itemSubs', 'itemSizes', 'itemSubs.itemSubSides')
-                ->whereIn('id', ['IT101', 'IT102'])->get();
+                ->whereIn('id', ['IT404'])->get();
 
             foreach ($masterItemTypes as $code => $item) {
                 $product = Product::with('productSizes', 'productColors', 'productColors.productColorSides')
@@ -53,9 +40,9 @@ class UpdateController extends Controller
 
                 if ($product) {
                     var_dump("update the product {$product->title}");
-                    $this->updateProduct($item, $product);
-                    // ate a product sizes
-                    $this->updateProductSizes($product, $item->itemSizes, $productSizeInserts);
+//                    $this->updateProduct($item, $product);
+//                    // ate a product sizes
+//                    $this->updateProductSizes($product, $item->itemSizes, $productSizeInserts);
 
                     $this->_updateProductColors($item->itemSubs, $product, $productColorInserts, $productColorSideInserts);
 

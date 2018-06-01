@@ -58,7 +58,9 @@ class InsertController extends Controller
             $lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
 
             $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
-                ->pluck('title', 'code')->toArray();
+                ->pluck('title', 'code')
+//                ->whereIn(['IT413', 'IT414', 'IT415', 'IT416', 'IT417', 'IT418', 'IT419', 'IT420', 'IT421', 'IT422', 'IT423'])
+                ->toArray();
             $products        = Product::select('title', 'code')->pluck('title', 'code')->toArray();
             $diffs           = array_diff_assoc($masterItemTypes, $products);
 
@@ -70,7 +72,7 @@ class InsertController extends Controller
                     ->where('item_code', $code)
                     ->first();
 
-                $productInserts[] = $this->generateProduct($item, $lastProductId);
+                $productInserts[] = $this->_generateProduct($item, $lastProductId);
                 var_dump("generate the product $lastProductId");
                 $this->generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes, $lastProductSizeOrder);
 
@@ -216,7 +218,7 @@ class InsertController extends Controller
         ];
     }
 
-    private function generateProduct($item, $lastProductId)
+    private function _generateProduct($item, $lastProductId)
     {
         if ($item->state == 1) {
             $delete = 0;
@@ -250,37 +252,9 @@ class InsertController extends Controller
             $category = $item->category_id;
         }
 
-        if ($item->name == '名刺ケース') {
-            $price = $toolPrice = 1800;
-        } else if ($item->name == 'コインケース' || $item->name == 'ライター') {
-            $price = $toolPrice = 1500;
-        } else if ($item->name == 'ワイヤレスバッテリー') {
-            $price = $toolPrice = 1580;
-        } else if ($item->name == 'ファインジャージーTシャツ' || $item->name == 'ファインジャージーTシャツ（ガールズ）') {
-            $price     = 1000;
-            $toolPrice = 1700;
-        } else if ($item->name == 'ドライカノコユーティリティーポロシャツ') {
-            $price     = 1400;
-            $toolPrice = 2100;
-        } else if ($item->name == 'Tシャツワンピース（ミニ丈）') {
-            $price     = 1400;
-            $toolPrice = 2400;
-        } else if ($item->name == 'ヘヴィーウェイトコットンポロシャツ') {
-            $price     = 1900;
-            $toolPrice = 2750;
-        } else if ($item->name == 'オックスフォードボタンダウンショートスリーブシャツ') {
-            $price     = 2500;
-            $toolPrice = 3200;
-        } else {
-            $price     = $item->item_price;
-            $toolPrice = $item->tool_price;
-        }
-        // delete
-//        if ($item->name == 'スマホリング（ハート型）') {
-//            $price = $toolPrice = 750;
-//        } else {
-//            $price = $toolPrice = 600;
-//        }
+        $prices    = $this->_getProductPrices($item);
+        $price     = $prices['price'];
+        $toolPrice = $prices['tool_price'];
 
         return [
             'id'               => $lastProductId,
@@ -288,14 +262,12 @@ class InsertController extends Controller
             'title'            => $item->name,
             'code'             => $item->item_code,
             'price'            => $price,
-            // 'price'         => $item->item_price,
             'is_main'          => $item->is_main,
             'is_deleted'       => $delete,
             'order'            => $item->order,
             'created_at'       => $item->created,
             'updated_at'       => $item->modified,
             'tool_price'       => $toolPrice,
-            // 'tool_price'    => $item->tool_price,
             'color_total'      => $item->color_total,
             'size'             => $item->size,
             'sale_price'       => $item->sale_price,
@@ -305,7 +277,55 @@ class InsertController extends Controller
         ];
     }
 
+    /**
+     * @param $item
+     * @return array
+     */
+    private function _getProductPrices($item)
+    {
+        if ($item->id == 'IT413' || $item->id == 'IT416') {
+            $price = $toolPrice = 1300;
+        } else if ($item->id == 'IT414' || $item->id == 'IT415') {
+            $price = $toolPrice = 1100;
+        } else if ($item->id == 'IT417') {
+            $price = $toolPrice = 650;
+        } else if ($item->id == 'IT418') {
+            $price     = 1400;
+            $toolPrice = 2400;
+        } else if ($item->id == 'IT419') {
+            $price     = 1000;
+            $toolPrice = 2000;
+        } else if ($item->id == 'IT420' || $item->id == 'IT422' || $item->id == 'IT423') {
+            $price     = 1600;
+            $toolPrice = 2600;
+        } else if ($item->id == 'IT421') {
+            $price     = 2300;
+            $toolPrice = 3300;
+        } else if ($item->id == 'IT409') {
+            $price = $toolPrice = 4000;
+        } else if ($item->id == 'IT410') {
+            $price = $toolPrice = 3800;
+        } else if ($item->id == 'IT411') {
+            $price = $toolPrice = 900;
+        } else if ($item->id == 'IT412') {
+            $price = $toolPrice = 1000;
+        } else {
+            $price     = $item->item_price;
+            $toolPrice = $item->tool_price;
+        }
 
+        return [
+            'price'      => $price,
+            'tool_price' => $toolPrice,
+        ];
+    }
+
+    /**
+     * @param $productSizeInserts
+     * @param $lastProductId
+     * @param $itemSizes
+     * @param $lastProductSizeOrder
+     */
     private function generateProductSizes(&$productSizeInserts, $lastProductId, $itemSizes, &$lastProductSizeOrder)
     {
         foreach ($itemSizes as $itemSize) {
@@ -328,22 +348,27 @@ class InsertController extends Controller
         }
     }
 
+    /**
+     * @param $item
+     * @param $order
+     * @param $printPrice
+     * @param bool $isWhite
+     * @return int
+     */
     private function _getPrintPrice($item, $order, $printPrice, $isWhite = false)
     {
-        if ($item->name == '名刺ケース' || $item->name == 'コインケース' || $item->name == 'ワイヤレスバッテリー' || $item->name == 'ライター') {
-            $printPrice = 0;
+        if ($item->id == 'IT413' || $item->id == 'IT414' || $item->id == 'IT415' || $item->id == 'IT416' || $item->id == 'IT417') {
+            if ($order == 1) {
+                return 0;
+            }
         }
 
-        if ($item->name == 'ファインジャージーTシャツ' || $item->name == 'ファインジャージーTシャツ（ガールズ）') {
+        if ($item->id == 'IT418' || $item->id == 'IT419' || $item->id == 'IT420' || $item->id == 'IT420' || $item->id == 'IT421' || $item->id == 'IT422' || $item->id == 'IT423') {
+            if ($order == 1 || $order == 2) {
+                $printPrice = 1000;
+            }
+        } else if ($item->id == 'ドライコットンタッチ ラウンドテールTシャツ') {
             if ($isWhite) {
-                if ($order == 1) {
-                    $printPrice = 700;
-                } else if ($order == 2) {
-                    $printPrice = 700;
-                } else {
-                    $printPrice = 450;
-                }
-            } else {
                 if ($order == 1) {
                     $printPrice = 1000;
                 } else if ($order == 2) {
@@ -351,67 +376,13 @@ class InsertController extends Controller
                 } else {
                     $printPrice = 650;
                 }
-            }
-        } else if ($item->name == 'ドライカノコユーティリティーポロシャツ') {
-            if ($isWhite) {
-                if ($order == 1) {
-                    $printPrice = 700;
-                } else if ($order == 2) {
-                    $printPrice = 850;
-                } else {
-                    $printPrice = 500;
-                }
             } else {
                 if ($order == 1) {
-                    $printPrice = 850;
+                    $printPrice = 1800;
                 } else if ($order == 2) {
-                    $printPrice = 1000;
+                    $printPrice = 1800;
                 } else {
-                    $printPrice = 700;
-                }
-            }
-        } else if ($item->name == 'Tシャツワンピース（ミニ丈）') {
-            if (!$isWhite) {
-                if ($order == 1) {
-                    $printPrice = 1000;
-                } else if ($order == 2) {
-                    $printPrice = 1000;
-                }
-            }
-        } else if ($item->name == 'ヘヴィーウェイトコットンポロシャツ') {
-            if ($isWhite) {
-                if ($order == 1) {
-                    $printPrice = 850;
-                } else if ($order == 2) {
-                    $printPrice = 1000;
-                } else {
-                    $printPrice = 700;
-                }
-            } else {
-                if ($order == 1) {
-                    $printPrice = 700;
-                } else if ($order == 2) {
-                    $printPrice = 850;
-                } else {
-                    $printPrice = 450;
-                }
-            }
-        } else if ($item->name == 'オックスフォードボタンダウンショートスリーブシャツ') {
-            if ($isWhite) {
-                if ($order == 1) {
-                    $printPrice = 700;
-                } else if ($order == 2) {
-                    $printPrice = 850;
-                } else {
-                    $printPrice = 450;
-                }
-            } else {
-                if ($order == 1) {
-                    $printPrice = 950;
-                } else if ($order == 2) {
-                    $printPrice = 1100;
-                } else {
-                    $printPrice = 800;
+                    $printPrice = 1400;
                 }
             }
         }

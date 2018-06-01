@@ -26,13 +26,13 @@
 >
     <channel>
         <title>Budgets</title>
-        <link>http://localhost/budgets-wordpress</link>
+        <link>https://budgets.jp</link>
         <description></description>
         <pubDate>{{ substr(\Carbon\Carbon::now()->toDayDateTimeString(), 0, -3) }}:10 +0000</pubDate>
         <language>en-US</language>
         <wp:wxr_version>1.2</wp:wxr_version>
-        <wp:base_site_url>http://localhost/budgets-wordpress</wp:base_site_url>
-        <wp:base_blog_url>http://localhost/budgets-wordpress</wp:base_blog_url>
+        <wp:base_site_url>https://budgets.jp</wp:base_site_url>
+        <wp:base_blog_url>https://budgets.jp</wp:base_blog_url>
 
         <wp:author>
             <wp:author_id>1</wp:author_id>
@@ -55,13 +55,13 @@
                     <?php $product->image = ''; ?>
                     <item>
                         <title>{!! $product->title !!}</title>
-                        <link>http://localhost/budgets-wordpress/{{ \Carbon\Carbon::now()->format('Y/m/d') }}/{!! strTolower(urlencode($product->title)) !!}/</link>
+                        <link>https://budgets.jp/{{ \Carbon\Carbon::now()->format('Y/m/d') }}/{!! strTolower(urlencode($product->title)) !!}/</link>
                         <pubDate>{{ substr(\Carbon\Carbon::now()->toDayDateTimeString(), 0, -3) }}:15 +0000</pubDate>
                         <dc:creator><![CDATA[admin]]></dc:creator>
-                        <guid isPermaLink="false">http://localhost/budgets-wordpress/?p={!! $lastPostId !!}</guid>
+                        <guid isPermaLink="false">https://budgets.jp/?p={!! $lastPostId !!}</guid>
                         <description></description>
                         <content:encoded>
-                            <![CDATA[description <a href="http://localhost/budgets-wordpress/wp-admin/edit.php?category_name={!! 'parent-category-t-shirt' !!}">{!! $category->title !!}</a>]]>
+                            <![CDATA[description <a href="https://budgets.jp/wp-admin/edit.php?category_name={!! 'parent-category-t-shirt' !!}">{!! $category->title !!}</a>]]>
                         </content:encoded>
                         <excerpt:encoded><![CDATA[]]></excerpt:encoded>
                         <wp:post_id>{!! $lastPostId !!}</wp:post_id>
