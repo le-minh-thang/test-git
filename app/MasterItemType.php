@@ -8,6 +8,7 @@ class MasterItemType extends Model
 {
     protected $primaryKey = 'id'; // or null
     public $incrementing = false;
+    public $timestamps = false;
     /**
      * The database name used by the model.
      *
