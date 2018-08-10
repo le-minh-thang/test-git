@@ -16,8 +16,9 @@ Route::get('/', function () {
 });
 
 Route::get('insert', 'InsertController@index')->name('insert');
+Route::get('generate-product-for-import-wp', 'GenerateDataForImportWPController@generateProducts')->name('generateDataGenerateProductsImportWP');
 //Route::get('insert-from-printty', 'InsertController@insertFromPrintty')->name('insertFromPrintty');
-Route::get('update', 'UpdateController@index')->name('update');
+Route::get('update-product', 'UpdateController@index')->name('update');
 Route::get('update-budget-product', 'UpdateBudgetItemController@index')->name('updateOther');
 Route::get('diff-items', 'DiffShowItemController@index')->name('DiffShowItem');
 Route::get('update-delete-field', 'DiffShowItemController@updateDeleteField')->name('UpdateDeleteField');
@@ -25,8 +26,10 @@ Route::get('diff-product', 'DiffShowItemController@diffProducts')->name('DiffPro
 Route::get('short-diff-product', 'DiffShowItemController@shortDiffProducts')->name('ShortDiffProduct');
 Route::get('generate-data-for-import-wp', 'GenerateDataForImportWPController@index')->name('generateDataForImportWP');
 
-Route::get('generate-product-for-import-wp', 'GenerateDataForImportWPController@generateProducts')->name('generateDataGenerateProductsImportWP');
+
 
 // Change up-t connection to orilab connection
 Route::get('get-orilabo-price', 'UpdatePriceOrilabController@index')->name('get.price.orilab');
 Route::post('update-orilabo-price', 'UpdatePriceOrilabController@update')->name('update.price.orilab');
+
+Route::get('update-nobori', 'GenerateDataForImportWPController@updateNobori')->name('update.nobori');

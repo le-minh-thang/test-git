@@ -32,32 +32,37 @@ class UpdatePriceOrilabController extends Controller
         $updatedItems      = [];
         $updatedItemsOther = [];
 
-//        try {
-//            DB::beginTransaction();
+        try {
+            DB::beginTransaction();
             \Excel::load('C:\Users\Admin\Downloads\test.xlsx', function ($reader) use (&$updatedItems, &$updatedItemsOther) {
                 $reader->each(function ($data) use (&$updatedItems, &$updatedItemsOther) {
-                    $item = MasterItemType::where('name', $data->name)->where('item_code_nominal', 'like', "%{$data->code}")->with('itemSubs')->first();
+                    $name = $data->name;
+                    $nameOther = str_replace('T', 'Ｔ', $data->name);
+                    $nameTheOther = str_replace('Ｔ', 'T', $data->name);
+                    $item = MasterItemType::where(function ($q) use ($name, $nameOther, $nameTheOther) {
+                        $q->where('name', $name)->orWhere('name', $nameOther)->orWhere('name', $nameTheOther);
+                    })->where('item_code_nominal', 'like', "%{$data->code}%")->with('itemSubs')->first();
 
                     if ($item) {
-//                        $this->updateItem($item, $data);
+                        $this->updateItem($item, $data);
                         $updatedItems[]               = [
                             'color'     => $data->color,
                             'name_code' => $item->name . ' - ' . $item->item_code_nominal,
                             'price'     => $data->body,
                         ];
                         $updatedItemsOther[$item->id] = $item->name;
-//                        $this->updateItemSubs($item->itemSubs, $data);
+                        $this->updateItemSubs($item->itemSubs, $data);
                     }
                 });
             });
 
-//            DB::commit();
+            DB::commit();
             var_dump($updatedItemsOther);
             dd($updatedItems);
-//        } catch (\Exception $exception) {
-//            DB::rollBack();
-//            dd($exception);
-//        }
+        } catch (\Exception $exception) {
+            DB::rollBack();
+            dd($exception);
+        }
     }
 
     /**

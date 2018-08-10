@@ -59,10 +59,11 @@ class InsertController extends Controller
 
             $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
                 ->pluck('title', 'code')
-//                ->whereIn(['IT413', 'IT414', 'IT415', 'IT416', 'IT417', 'IT418', 'IT419', 'IT420', 'IT421', 'IT422', 'IT423'])
+//                ->whereIn('id', ['IT424', 'IT425', 'IT426', 'IT427', 'IT428', 'IT429', 'IT430', 'IT431', 'IT432', 'IT433'])
                 ->toArray();
-            $products        = Product::select('title', 'code')->pluck('title', 'code')->toArray();
-            $diffs           = array_diff_assoc($masterItemTypes, $products);
+
+            $products = Product::select('title', 'code')->pluck('title', 'code')->toArray();
+            $diffs    = array_diff_assoc($masterItemTypes, $products);
 
             $lastProductSizeOrder  = ProductSize::orderBy('order', 'desc')->first()->order + 1;
             $lastProductColorOrder = ProductColor::orderBy('order', 'desc')->first()->order;
@@ -124,7 +125,7 @@ class InsertController extends Controller
     private function generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub, $item)
     {
         $order = null;
-        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF') {
+        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF' || $itemSub->color == '#f5f4f5' || $itemSub->color == '#ededed' || $itemSub->color == '#fafafa') {
             if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
                 $printPriceCost = $itemSub->cost1;
                 $order          = 1;
@@ -220,6 +221,17 @@ class InsertController extends Controller
 
     private function _generateProduct($item, $lastProductId)
     {
+        $noboriCategories = [
+            24 => 24,
+            25 => 25,
+            26 => 26,
+            27 => 27,
+            28 => 28,
+            48 => 48,
+            49 => 49,
+            51 => 51,
+        ];
+
         if ($item->state == 1) {
             $delete = 0;
         } else {
@@ -235,21 +247,21 @@ class InsertController extends Controller
         //    27 -> 22
         //    28 -> 23
         if ($item->category_id == 22) {
-            $category = 24;
+            $categoryId = 24;
         } else if ($item->category_id == 23) {
-            $category = 25;
+            $categoryId = 25;
         } else if ($item->category_id == 24) {
-            $category = 26;
+            $categoryId = 26;
         } else if ($item->category_id == 25) {
-            $category = 27;
+            $categoryId = 27;
         } else if ($item->category_id == 26) {
-            $category = 28;
+            $categoryId = 28;
         } else if ($item->category_id == 27) {
-            $category = 22;
+            $categoryId = 22;
         } else if ($item->category_id == 28) {
-            $category = 23;
+            $categoryId = 23;
         } else {
-            $category = $item->category_id;
+            $categoryId = $item->category_id;
         }
 
         $prices    = $this->_getProductPrices($item);
@@ -258,7 +270,7 @@ class InsertController extends Controller
 
         return [
             'id'               => $lastProductId,
-            'category_id'      => $category,
+            'category_id'      => $categoryId,
             'title'            => $item->name,
             'code'             => $item->item_code,
             'price'            => $price,
@@ -270,6 +282,7 @@ class InsertController extends Controller
             'tool_price'       => $toolPrice,
             'color_total'      => $item->color_total,
             'size'             => $item->size,
+            'is_nobori'        => isset($noboriCategories[$categoryId]) ? 1 : 0,
             'sale_price'       => $item->sale_price,
             'item_code_nomial' => $item->item_code_nominal,
             'material'         => $item->material,
@@ -283,32 +296,30 @@ class InsertController extends Controller
      */
     private function _getProductPrices($item)
     {
-        if ($item->id == 'IT413' || $item->id == 'IT416') {
-            $price = $toolPrice = 1300;
-        } else if ($item->id == 'IT414' || $item->id == 'IT415') {
-            $price = $toolPrice = 1100;
-        } else if ($item->id == 'IT417') {
-            $price = $toolPrice = 650;
-        } else if ($item->id == 'IT418') {
-            $price     = 1400;
-            $toolPrice = 2400;
-        } else if ($item->id == 'IT419') {
+        if ($item->id == 'IT468') {
+            $price     = 4000;
+            $toolPrice = 5300;
+        } else if ($item->id == 'IT469') {
+            $price     = 3200;
+            $toolPrice = 4200;
+        } else if ($item->id == 'IT470') {
+            $price     = 5500;
+            $toolPrice = 7000;
+        } else if ($item->id == 'IT471') {
+            $price     = 3200;
+            $toolPrice = 4200;
+        } else if ($item->id == 'IT472') {
+            $price     = 3000;
+            $toolPrice = 4000;
+        } else if ($item->id == 'IT473') {
+            $price     = 2400;
+            $toolPrice = 3400;
+        } else if ($item->id == 'IT474') {
+            $price     = 3000;
+            $toolPrice = 4000;
+        } else if ($item->id == 'IT475') {
             $price     = 1000;
             $toolPrice = 2000;
-        } else if ($item->id == 'IT420' || $item->id == 'IT422' || $item->id == 'IT423') {
-            $price     = 1600;
-            $toolPrice = 2600;
-        } else if ($item->id == 'IT421') {
-            $price     = 2300;
-            $toolPrice = 3300;
-        } else if ($item->id == 'IT409') {
-            $price = $toolPrice = 4000;
-        } else if ($item->id == 'IT410') {
-            $price = $toolPrice = 3800;
-        } else if ($item->id == 'IT411') {
-            $price = $toolPrice = 900;
-        } else if ($item->id == 'IT412') {
-            $price = $toolPrice = 1000;
         } else {
             $price     = $item->item_price;
             $toolPrice = $item->tool_price;
@@ -357,32 +368,32 @@ class InsertController extends Controller
      */
     private function _getPrintPrice($item, $order, $printPrice, $isWhite = false)
     {
-        if ($item->id == 'IT413' || $item->id == 'IT414' || $item->id == 'IT415' || $item->id == 'IT416' || $item->id == 'IT417') {
-            if ($order == 1) {
-                return 0;
-            }
-        }
+//        if ($item->id == 'IT413' || $item->id == 'IT414') {
+//            if ($order == 1) {
+//                return 0;
+//            }
+//        }
 
-        if ($item->id == 'IT418' || $item->id == 'IT419' || $item->id == 'IT420' || $item->id == 'IT420' || $item->id == 'IT421' || $item->id == 'IT422' || $item->id == 'IT423') {
+        if ($item->id == 'IT463' || $item->id == 'IT464') {
             if ($order == 1 || $order == 2) {
                 $printPrice = 1000;
             }
-        } else if ($item->id == 'ドライコットンタッチ ラウンドテールTシャツ') {
+        } else {
             if ($isWhite) {
-                if ($order == 1) {
-                    $printPrice = 1000;
-                } else if ($order == 2) {
-                    $printPrice = 1000;
-                } else {
-                    $printPrice = 650;
+                if ($item->id == 'IT468') {
+                    if ($order == 1 || $order == 2) {
+                        $printPrice = 1300;
+                    }
+                } else if ($item->id == 'IT469' || $item->id == 'IT471' || $item->id == 'IT472' || $item->id == 'IT473' || $item->id == 'IT474' || $item->id == 'IT475') {
+                    if ($order == 1 || $order == 2) {
+                        $printPrice = 1000;
+                    }
                 }
             } else {
-                if ($order == 1) {
-                    $printPrice = 1800;
-                } else if ($order == 2) {
-                    $printPrice = 1800;
-                } else {
-                    $printPrice = 1400;
+                if ($item->id == 'IT468' || $item->id == 'IT469' || $item->id == 'IT470' || $item->id == 'IT471' || $item->id == 'IT472' || $item->id == 'IT473' || $item->id == 'IT474') {
+                    if ($order == 1 || $order == 2) {
+                        $printPrice = 1500;
+                    }
                 }
             }
         }
