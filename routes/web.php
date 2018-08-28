@@ -24,7 +24,7 @@ Route::get('diff-items', 'DiffShowItemController@index')->name('DiffShowItem');
 Route::get('update-delete-field', 'DiffShowItemController@updateDeleteField')->name('UpdateDeleteField');
 Route::get('diff-product', 'DiffShowItemController@diffProducts')->name('DiffProduct');
 Route::get('short-diff-product', 'DiffShowItemController@shortDiffProducts')->name('ShortDiffProduct');
-Route::get('generate-data-for-import-wp', 'GenerateDataForImportWPController@index')->name('generateDataForImportWP');
+//Route::get('generate-data-for-import-wp', 'GenerateDataForImportWPController@index')->name('generateDataForImportWP');
 
 
 
@@ -33,3 +33,6 @@ Route::get('get-orilabo-price', 'UpdatePriceOrilabController@index')->name('get.
 Route::post('update-orilabo-price', 'UpdatePriceOrilabController@update')->name('update.price.orilab');
 
 Route::get('update-nobori', 'GenerateDataForImportWPController@updateNobori')->name('update.nobori');
+
+// Something doesn't relate to this. It has just been found a active link
+Route::get('check-link', 'InsertController@checkLink')->name('check.link');

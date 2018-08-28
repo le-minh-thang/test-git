@@ -20,15 +20,16 @@ use App\UpTPrinttyProductColorSide;
 
 class InsertController extends Controller
 {
-    private $_dateTime;
+    private $_productPrices      = [];
+    private $_printProductPrices = [];
 
     public function __construct()
     {
-        $this->_dateTime = Carbon::now()->format('Y-m-d H:i:s');
+        $this->_setProductPrices();
     }
 
     /**
-     * Display a listing of the resource.
+     * Display a listing of new items.
      *
      * @return \Illuminate\Http\Response
      */
@@ -59,7 +60,6 @@ class InsertController extends Controller
 
             $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
                 ->pluck('title', 'code')
-//                ->whereIn('id', ['IT424', 'IT425', 'IT426', 'IT427', 'IT428', 'IT429', 'IT430', 'IT431', 'IT432', 'IT433'])
                 ->toArray();
 
             $products = Product::select('title', 'code')->pluck('title', 'code')->toArray();
@@ -75,10 +75,10 @@ class InsertController extends Controller
 
                 $productInserts[] = $this->_generateProduct($item, $lastProductId);
                 var_dump("generate the product $lastProductId");
-                $this->generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes, $lastProductSizeOrder);
+                $this->_generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes, $lastProductSizeOrder);
 
                 foreach ($item->itemSubs as $itemSub) {
-                    $productColorInserts[] = $this->generateProductColors($itemSub, $lastProductId, $lastProductColorId, $lastProductColorOrder);
+                    $productColorInserts[] = $this->_generateProductColors($itemSub, $lastProductId, $lastProductColorId, $lastProductColorOrder);
                     foreach ($itemSub->itemSubSides as $itemSubSide) {
                         $productColorSideInserts[] = $this->generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub, $item);
                     }
@@ -122,57 +122,58 @@ class InsertController extends Controller
         }
     }
 
+    /**
+     * Prepare product color side data
+     *
+     * @param $itemSubSide
+     * @param $lastProductColorId
+     * @param $itemSub
+     * @param $item
+     * @return array
+     */
     private function generateProductColorSides($itemSubSide, $lastProductColorId, $itemSub, $item)
     {
         $order = null;
-        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF' || $itemSub->color == '#f5f4f5' || $itemSub->color == '#ededed' || $itemSub->color == '#fafafa') {
-            if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
-                $printPriceCost = $itemSub->cost1;
-                $order          = 1;
-            } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
-                $printPriceCost = $itemSub->cost2;
-                $order          = 2;
-            } else {
-                $printPriceCost = $itemSub->cost3;
-                if ($itemSubSide->title == '左袖') {
-                    $order = 3;
-                } else if ($itemSubSide->title == '右袖') {
-                    $order = 4;
-                }
-            }
-
-            // Get print price for the product
-            if (isset($order)) {
-                $orderPrice = $order;
-            } else {
-                $orderPrice = 6;
-            }
-
-            $printPriceCost = $this->_getPrintPrice($item, $orderPrice, $printPriceCost, true);
+        if ($itemSubSide->side_name == 'front') {
+            $order = 1;
         } else {
-            if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
-                $printPriceCost = $itemSub->cost1;
-                $order          = 1;
-            } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
-                $printPriceCost = $itemSub->cost2;
-                $order          = 2;
+            if ((int)$itemSubSide->side_name <= 4) {
+                $order = (int)$itemSubSide->side_name;
             } else {
-                $printPriceCost = $itemSub->cost3;
-                if ($itemSubSide->title == '左袖') {
-                    $order = 3;
-                } else if ($itemSubSide->title == '右袖') {
-                    $order = 4;
+                if ($itemSubSide->title == '表' || $itemSubSide->title == '表裏同じ' || $itemSubSide->title == '左前' || $itemSubSide->title == '右前') {
+                    $order = 1;
+                } else if ($itemSubSide->title == '裏' || $itemSubSide->title == '左後' || $itemSubSide->title == '右後') {
+                    $order = 2;
+                } else {
+                    if ($itemSubSide->title == '左袖') {
+                        $order = 3;
+                    } else if ($itemSubSide->title == '右袖') {
+                        $order = 4;
+                    }
                 }
             }
-
-            // Get print price for the product
-            if (isset($order)) {
-                $orderPrice = $order;
-            } else {
-                $orderPrice = 0;
-            }
-            $printPriceCost = $this->_getPrintPrice($item, $orderPrice, $printPriceCost);
         }
+
+        if ($order == 1) {
+            $printPriceCost = $itemSub->cost1;
+        } else if ($order == 2) {
+            $printPriceCost = $itemSub->cost2;
+        } else if ($order == 3 || $order == 4) {
+            $printPriceCost = $itemSub->cost3;
+        } else {
+            $printPriceCost = 0; // This line can prevent IDE mention the variable might has not been defined
+            dd('Something went wrong!');
+        }
+
+        $color = 'others';
+
+        // White color depend on the white colors were defined on the excel sheet
+        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF' || $itemSub->color == '#edeef0' || $itemSub->color == '#edeef2' || $itemSub->color == '#dfdee3' || $itemSub->color == '#eceff2') {
+            $color = 'white';
+        }
+
+        // Get print price for the product
+        $printPriceCost = $this->_getPrintPrice($item, $order, $printPriceCost, $color);
 
         if ($itemSubSide->state == 1) {
             $delete = 0;
@@ -196,8 +197,16 @@ class InsertController extends Controller
         ];
     }
 
-
-    private function generateProductColors($itemSub, $lastProductId, $lastProductColorId, &$lastProductColorOrder)
+    /**
+     * Prepare product colors
+     *
+     * @param $itemSub
+     * @param $lastProductId
+     * @param $lastProductColorId
+     * @param $lastProductColorOrder
+     * @return array
+     */
+    private function _generateProductColors($itemSub, $lastProductId, $lastProductColorId, &$lastProductColorOrder)
     {
         if ($itemSub->state == 1) {
             $delete = 0;
@@ -219,6 +228,13 @@ class InsertController extends Controller
         ];
     }
 
+    /**
+     * Prepare product data
+     *
+     * @param $item
+     * @param $lastProductId
+     * @return array
+     */
     private function _generateProduct($item, $lastProductId)
     {
         $noboriCategories = [
@@ -291,35 +307,25 @@ class InsertController extends Controller
     }
 
     /**
+     * Get product price and product print price
+     *
      * @param $item
      * @return array
      */
     private function _getProductPrices($item)
     {
-        if ($item->id == 'IT468') {
-            $price     = 4000;
-            $toolPrice = 5300;
-        } else if ($item->id == 'IT469') {
-            $price     = 3200;
-            $toolPrice = 4200;
-        } else if ($item->id == 'IT470') {
-            $price     = 5500;
-            $toolPrice = 7000;
-        } else if ($item->id == 'IT471') {
-            $price     = 3200;
-            $toolPrice = 4200;
-        } else if ($item->id == 'IT472') {
-            $price     = 3000;
-            $toolPrice = 4000;
-        } else if ($item->id == 'IT473') {
-            $price     = 2400;
-            $toolPrice = 3400;
-        } else if ($item->id == 'IT474') {
-            $price     = 3000;
-            $toolPrice = 4000;
-        } else if ($item->id == 'IT475') {
-            $price     = 1000;
-            $toolPrice = 2000;
+        if (isset($this->_productPrices[$item->id])) {
+            if (isset($this->_productPrices[$item->id]['price'])) {
+                $price = $this->_productPrices[$item->id]['price'];
+            } else {
+                $price = $item->item_price;
+            }
+
+            if (isset($this->_productPrices[$item->id]['tool_price'])) {
+                $toolPrice = $this->_productPrices[$item->id]['tool_price'];
+            } else {
+                $toolPrice = $item->tool_price;
+            }
         } else {
             $price     = $item->item_price;
             $toolPrice = $item->tool_price;
@@ -337,7 +343,7 @@ class InsertController extends Controller
      * @param $itemSizes
      * @param $lastProductSizeOrder
      */
-    private function generateProductSizes(&$productSizeInserts, $lastProductId, $itemSizes, &$lastProductSizeOrder)
+    private function _generateProductSizes(&$productSizeInserts, $lastProductId, $itemSizes, &$lastProductSizeOrder)
     {
         foreach ($itemSizes as $itemSize) {
             if ($itemSize->state == 1) {
@@ -363,149 +369,287 @@ class InsertController extends Controller
      * @param $item
      * @param $order
      * @param $printPrice
-     * @param bool $isWhite
+     * @param $color
      * @return int
      */
-    private function _getPrintPrice($item, $order, $printPrice, $isWhite = false)
+    private function _getPrintPrice($item, $order, $printPrice, $color)
     {
-//        if ($item->id == 'IT413' || $item->id == 'IT414') {
-//            if ($order == 1) {
-//                return 0;
-//            }
-//        }
+        $position = $order;
+        if ($order == 4) {
+            $position = 3;
+        }
 
-        if ($item->id == 'IT463' || $item->id == 'IT464') {
-            if ($order == 1 || $order == 2) {
-                $printPrice = 1000;
-            }
-        } else {
-            if ($isWhite) {
-                if ($item->id == 'IT468') {
-                    if ($order == 1 || $order == 2) {
-                        $printPrice = 1300;
-                    }
-                } else if ($item->id == 'IT469' || $item->id == 'IT471' || $item->id == 'IT472' || $item->id == 'IT473' || $item->id == 'IT474' || $item->id == 'IT475') {
-                    if ($order == 1 || $order == 2) {
-                        $printPrice = 1000;
-                    }
-                }
-            } else {
-                if ($item->id == 'IT468' || $item->id == 'IT469' || $item->id == 'IT470' || $item->id == 'IT471' || $item->id == 'IT472' || $item->id == 'IT473' || $item->id == 'IT474') {
-                    if ($order == 1 || $order == 2) {
-                        $printPrice = 1500;
-                    }
-                }
-            }
+        if (isset($this->_printProductPrices[$color][$item->id][$position])) {
+            $printPrice = $this->_printProductPrices[$color][$item->id][$position];
         }
 
         return $printPrice;
     }
 
-//    public function insertFromPrintty()
-//    {
-//        $printtyProductInserts          = [];
-//        $printtyProductSizeInserts      = [];
-//        $printtyProductColorInserts     = [];
-//        $printtyProductColorSideInserts = [];
-//
-//        $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id', 'products_linked_codes.code as product_code')
-//            ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
-//            ->where('products_linked_codes.is_deleted', 0)
-//            ->where('products.id', '>', 320)
-//            ->pluck('product_code', 'product.id')->toArray();
-//
-//        $printtyProducts = PrinttyProduct::select('id', 'product_code')->pluck('product_code', 'id')->toArray();
-//
-//        $diffs = array_diff_assoc($printtyPrinttyProducts, $printtyProducts);
-//
-//        if (count($diffs)) {
-//            $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id as id', 'products_linked_codes.code as product_code')
-//                ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
-//                ->where('products_linked_codes.is_deleted', 0)
-//                ->where('products.id', '>', 320)
-//                ->whereIn('products.id', array_flip($diffs))
-//                ->with([
-//                    'productSizes',
-//                    'productColors' => function ($q) {
-//                        $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors.id', 'products_colors.created_at', 'products_colors.updated_at')
-//                            ->with([
-//                                'productColorSides' => function ($q) {
-//                                    $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors_sides.id', 'products_colors_sides.created_at', 'products_colors_sides.updated_at')
-//                                        ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id ', '=', 'products_colors_sides.id');
-//                                },
-//                            ])
-//                            ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id', '=', 'products_colors .id');
-//                    },
-//                ])
-//                ->get();
-//            if ($printtyPrinttyProducts->count()) {
-//                foreach ($printtyPrinttyProducts as $printtyPrinttyProduct) {
-//                    $this->_generatePrinttyProduct($printtyPrinttyProduct, $printtyProductInserts);
-//                    if ($printtyPrinttyProduct->productSizes->count()) {
-//                        foreach ($printtyPrinttyProduct->productSizes as $printtyProductSize) {
-//                            $this->_generatePrinttyProductSize($printtyProductSize, $printtyProductSizeInserts, $printtyPrinttyProduct->product_code);
-//                        }
-//                    }
-//
-//                    if ($printtyPrinttyProduct->productColors->count()) {
-//                        foreach ($printtyPrinttyProduct->productColors as $printtyProductColor) {
-//                            $this->_generatePrinttyProductColor($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
-//
-//                            if ($printtyProductColor->productColorSides->count()) {
-//                                foreach ($printtyProductColor->productColorSides as $productColorSide) {
-//                                    $this->_generatePrinttyProductColorSide($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            } else {
-//                var_dump('Printty product is not found');
-//            }
-//        } else {
-//            var_dump('No diff');
-//        }
-//    }
-
-    private function _generatePrinttyProduct($printtyProduct, &$printtyProductInserts)
+    /**
+     * Check active link
+     */
+    public function checkLink()
     {
-        $printtyProductInserts[] = [
-            'id'                       => $printtyProduct->id,
-            'product_code'             => $printtyProduct->product_code,
-            'is_for_nekoposu_delivery' => 0,
-        ];
+        $first   = 'http://';
+        $content = '';
+        $third   = '.mp3';
+        for ($i = 0; $i <= strlen($content); $i++) {
+            $url = sprintf('%s%s%s%s%s', $first, (substr($content, 0, $i)), strtoupper(substr($content, $i, 1)), (substr($content, $i + 1)), $third);
+            var_dump($url);
+            $returned_content = $this->_getData($url);
+            if (preg_match('/(404 Not Found)/', $returned_content)) {
+//                var_dump('not match');
+            } else {
+                dd('match');
+            }
+        }
     }
 
-    private function _generatePrinttyProductSize($printtyProductSize, &$printtyProductSizeInserts, $productCode)
+    /**
+     * Get data
+     *
+     * @param $url
+     * @return mixed
+     */
+    private function _getData($url)
     {
-        $printtyProductSizeInserts[] = [
-            'id'           => $printtyProductSize->id,
-            'product_code' => $productCode,
-            'size_name'    => $printtyProductSize->title,
-            'created'      => $printtyProductSize->created_at,
-            'modified'     => $printtyProductSize->updated_at,
-        ];
+        $ch      = curl_init();
+        $timeout = 5;
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+        $data = curl_exec($ch);
+        curl_close($ch);
+        return $data;
     }
 
-    private function _generatePrinttyProductColor($printtyProductColor, &$printtyProductColorInserts, $productCode)
+    /**
+     * Set product and print product prices
+     */
+    private function _setProductPrices()
     {
-        $printtyProductColorInserts[] = [
-            'id'           => $printtyProductColor->id,
-            'product_code' => $productCode,
-            'size_name'    => $printtyProductColor->title,
-            'created'      => $printtyProductColor->created_at,
-            'modified'     => $printtyProductColor->updated_at,
+        // Everything is different from add items file
+
+        $this->_productPrices = [
+            'IT476'    => [
+                'price'      => 600,
+                'tool_price' => 1300,
+            ],
+            'IT477'    => [
+                'price'      => 600,
+                'tool_price' => 1300,
+            ],
+            'IT478'    => [
+                'price'      => 1000,
+                'tool_price' => 1900,
+            ],
+            'IT482'    => [
+                'price'      => 1300,
+                'tool_price' => 2100,
+            ], 'IT483' => [
+                'price'      => 1700,
+                'tool_price' => 2500,
+            ], 'IT488' => [
+                'price'      => 700,
+                'tool_price' => 1500,
+            ], 'IT489' => [
+                'price'      => 1800,
+                'tool_price' => 2600,
+            ], 'IT490' => [
+                'price'      => 600,
+                'tool_price' => 1400,
+            ], 'IT491' => [
+                'price'      => 1500,
+                'tool_price' => 2300,
+            ], 'IT493' => [
+                'price' => 1300,
+            ],
         ];
+
+        $this->_productPrices['IT479'] = $this->_productPrices['IT478'];
+        $this->_productPrices['IT480'] = $this->_productPrices['IT478'];
+        $this->_productPrices['IT481'] = $this->_productPrices['IT478'];
+        $this->_productPrices['IT484'] = $this->_productPrices['IT482'];
+        $this->_productPrices['IT485'] = $this->_productPrices['IT482'];
+        $this->_productPrices['IT492'] = $this->_productPrices['IT482'];
+        $this->_productPrices['IT495'] = $this->_productPrices['IT482'];
+        $this->_productPrices['IT486'] = $this->_productPrices['IT483'];
+        $this->_productPrices['IT487'] = $this->_productPrices['IT483'];
+        $this->_productPrices['IT494'] = $this->_productPrices['IT483'];
+
+        $this->_printProductPrices = [
+            'white'  => [
+                'IT482'    => [
+                    1 => 800,
+                    2 => 800,
+                    3 => 800,
+                ], 'IT483' => [
+                    1 => 800,
+                    2 => 800,
+                ], 'IT488' => [
+                    1 => 800,
+                ],
+            ],
+            'others' => [
+                'IT476'    => [
+                    1 => 700,
+                    2 => 700,
+                ], 'IT478' => [
+                    1 => 900,
+                    2 => 900,
+                ], 'IT482' => [
+                    1 => 1000,
+                    2 => 1000,
+                    3 => 1000,
+                ], 'IT491' => [
+                    1 => 1300,
+                    2 => 1300,
+                    3 => 1000,
+                ], 'IT483' => [
+                    1 => 1000,
+                    2 => 1000,
+                ], 'IT488' => [
+                    1 => 1000,
+                ],
+            ],
+        ];
+
+        // White
+        $this->_printProductPrices['white']['IT484'] = $this->_printProductPrices['white']['IT482'];
+        $this->_printProductPrices['white']['IT485'] = $this->_printProductPrices['white']['IT482'];
+        $this->_printProductPrices['white']['IT491'] = $this->_printProductPrices['white']['IT482'];
+        $this->_printProductPrices['white']['IT492'] = $this->_printProductPrices['white']['IT482'];
+        $this->_printProductPrices['white']['IT495'] = $this->_printProductPrices['white']['IT482'];
+        $this->_printProductPrices['white']['IT486'] = $this->_printProductPrices['white']['IT483'];
+        $this->_printProductPrices['white']['IT487'] = $this->_printProductPrices['white']['IT483'];
+        $this->_printProductPrices['white']['IT493'] = $this->_printProductPrices['white']['IT483'];
+        $this->_printProductPrices['white']['IT494'] = $this->_printProductPrices['white']['IT483'];
+        $this->_printProductPrices['white']['IT489'] = $this->_printProductPrices['white']['IT488'];
+        $this->_printProductPrices['white']['IT490'] = $this->_printProductPrices['white']['IT488'];
+
+        // The other colors
+        $this->_printProductPrices['others']['IT477'] = $this->_printProductPrices['others']['IT476'];
+        $this->_printProductPrices['others']['IT479'] = $this->_printProductPrices['others']['IT478'];
+        $this->_printProductPrices['others']['IT480'] = $this->_printProductPrices['others']['IT478'];
+        $this->_printProductPrices['others']['IT481'] = $this->_printProductPrices['others']['IT478'];
+        $this->_printProductPrices['others']['IT484'] = $this->_printProductPrices['others']['IT482'];
+        $this->_printProductPrices['others']['IT485'] = $this->_printProductPrices['others']['IT482'];
+        $this->_printProductPrices['others']['IT492'] = $this->_printProductPrices['others']['IT482'];
+        $this->_printProductPrices['others']['IT495'] = $this->_printProductPrices['others']['IT482'];
+        $this->_printProductPrices['others']['IT486'] = $this->_printProductPrices['others']['IT483'];
+        $this->_printProductPrices['others']['IT487'] = $this->_printProductPrices['others']['IT483'];
+        $this->_printProductPrices['others']['IT493'] = $this->_printProductPrices['others']['IT483'];
+        $this->_printProductPrices['others']['IT494'] = $this->_printProductPrices['others']['IT483'];
+        $this->_printProductPrices['others']['IT489'] = $this->_printProductPrices['others']['IT488'];
+        $this->_printProductPrices['others']['IT490'] = $this->_printProductPrices['others']['IT488'];
     }
 
-    private function _generatePrinttyProductColorSide($printtyProductColorSide, &$printtyProductColorSideInserts, $productCode)
-    {
-        $printtyProductColorSideInserts[] = [
-            'id'           => $printtyProductColorSide->id,
-            'product_code' => $productCode,
-            'size_name'    => $printtyProductColorSide->title,
-            'created'      => $printtyProductColorSide->created_at,
-            'modified'     => $printtyProductColorSide->updated_at,
-        ];
-    }
+    //    public function insertFromPrintty()
+    //    {
+    //        $printtyProductInserts          = [];
+    //        $printtyProductSizeInserts      = [];
+    //        $printtyProductColorInserts     = [];
+    //        $printtyProductColorSideInserts = [];
+    //
+    //        $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id', 'products_linked_codes.code as product_code')
+    //            ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
+    //            ->where('products_linked_codes.is_deleted', 0)
+    //            ->where('products.id', '>', 320)
+    //            ->pluck('product_code', 'product.id')->toArray();
+    //
+    //        $printtyProducts = PrinttyProduct::select('id', 'product_code')->pluck('product_code', 'id')->toArray();
+    //
+    //        $diffs = array_diff_assoc($printtyPrinttyProducts, $printtyProducts);
+    //
+    //        if (count($diffs)) {
+    //            $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id as id', 'products_linked_codes.code as product_code')
+    //                ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
+    //                ->where('products_linked_codes.is_deleted', 0)
+    //                ->where('products.id', '>', 320)
+    //                ->whereIn('products.id', array_flip($diffs))
+    //                ->with([
+    //                    'productSizes',
+    //                    'productColors' => function ($q) {
+    //                        $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors.id', 'products_colors.created_at', 'products_colors.updated_at')
+    //                            ->with([
+    //                                'productColorSides' => function ($q) {
+    //                                    $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors_sides.id', 'products_colors_sides.created_at', 'products_colors_sides.updated_at')
+    //                                        ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id ', '=', 'products_colors_sides.id');
+    //                                },
+    //                            ])
+    //                            ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id', '=', 'products_colors .id');
+    //                    },
+    //                ])
+    //                ->get();
+    //            if ($printtyPrinttyProducts->count()) {
+    //                foreach ($printtyPrinttyProducts as $printtyPrinttyProduct) {
+    //                    $this->_generatePrinttyProduct($printtyPrinttyProduct, $printtyProductInserts);
+    //                    if ($printtyPrinttyProduct->productSizes->count()) {
+    //                        foreach ($printtyPrinttyProduct->productSizes as $printtyProductSize) {
+    //                            $this->_generatePrinttyProductSize($printtyProductSize, $printtyProductSizeInserts, $printtyPrinttyProduct->product_code);
+    //                        }
+    //                    }
+    //
+    //                    if ($printtyPrinttyProduct->productColors->count()) {
+    //                        foreach ($printtyPrinttyProduct->productColors as $printtyProductColor) {
+    //                            $this->_generatePrinttyProductColor($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
+    //
+    //                            if ($printtyProductColor->productColorSides->count()) {
+    //                                foreach ($printtyProductColor->productColorSides as $productColorSide) {
+    //                                    $this->_generatePrinttyProductColorSide($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
+    //                                }
+    //                            }
+    //                        }
+    //                    }
+    //                }
+    //            } else {
+    //                var_dump('Printty product is not found');
+    //            }
+    //        } else {
+    //            var_dump('No diff');
+    //        }
+    //    }
+    //
+    //    private function _generatePrinttyProduct($printtyProduct, &$printtyProductInserts)
+    //    {
+    //        $printtyProductInserts[] = [
+    //            'id'                       => $printtyProduct->id,
+    //            'product_code'             => $printtyProduct->product_code,
+    //            'is_for_nekoposu_delivery' => 0,
+    //        ];
+    //    }
+    //
+    //    private function _generatePrinttyProductSize($printtyProductSize, &$printtyProductSizeInserts, $productCode)
+    //    {
+    //        $printtyProductSizeInserts[] = [
+    //            'id'           => $printtyProductSize->id,
+    //            'product_code' => $productCode,
+    //            'size_name'    => $printtyProductSize->title,
+    //            'created'      => $printtyProductSize->created_at,
+    //            'modified'     => $printtyProductSize->updated_at,
+    //        ];
+    //    }
+    //
+    //    private function _generatePrinttyProductColor($printtyProductColor, &$printtyProductColorInserts, $productCode)
+    //    {
+    //        $printtyProductColorInserts[] = [
+    //            'id'           => $printtyProductColor->id,
+    //            'product_code' => $productCode,
+    //            'size_name'    => $printtyProductColor->title,
+    //            'created'      => $printtyProductColor->created_at,
+    //            'modified'     => $printtyProductColor->updated_at,
+    //        ];
+    //    }
+    //
+    //    private function _generatePrinttyProductColorSide($printtyProductColorSide, &$printtyProductColorSideInserts, $productCode)
+    //    {
+    //        $printtyProductColorSideInserts[] = [
+    //            'id'           => $printtyProductColorSide->id,
+    //            'product_code' => $productCode,
+    //            'size_name'    => $printtyProductColorSide->title,
+    //            'created'      => $printtyProductColorSide->created_at,
+    //            'modified'     => $printtyProductColorSide->updated_at,
+    //        ];
+    //    }
 }
