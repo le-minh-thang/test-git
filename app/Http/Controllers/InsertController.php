@@ -59,11 +59,16 @@ class InsertController extends Controller
             $lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
 
             $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
+                ->where('category_id', '>', 0)
+                ->where('id', '<>', 'IT489')
                 ->pluck('title', 'code')
                 ->toArray();
 
             $products = Product::select('title', 'code')->pluck('title', 'code')->toArray();
             $diffs    = array_diff_assoc($masterItemTypes, $products);
+
+            // Unless self insult, please dump and die $diffs before add items
+            // dd($diffs);
 
             $lastProductSizeOrder  = ProductSize::orderBy('order', 'desc')->first()->order + 1;
             $lastProductColorOrder = ProductColor::orderBy('order', 'desc')->first()->order;
