@@ -16,6 +16,7 @@ Route::get('/', function () {
 });
 
 Route::get('insert', 'InsertController@index')->name('insert');
+Route::get('updating-colors', 'UpdateColorController@index')->name('updateColors');
 Route::get('generate-product-for-import-wp', 'GenerateDataForImportWPController@generateProducts')->name('generateDataGenerateProductsImportWP');
 //Route::get('insert-from-printty', 'InsertController@insertFromPrintty')->name('insertFromPrintty');
 Route::get('update-product', 'UpdateController@index')->name('update');
@@ -36,3 +37,6 @@ Route::get('update-nobori', 'GenerateDataForImportWPController@updateNobori')->n
 
 // Something doesn't relate to this. It has just been found a active link
 Route::get('check-link', 'InsertController@checkLink')->name('check.link');
+
+// Update Up T Information of Items
+Route::get('updating-items', 'UpdateUpTItemController@update')->name('updateColors');
