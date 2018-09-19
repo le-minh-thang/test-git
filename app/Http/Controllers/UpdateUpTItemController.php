@@ -6,6 +6,7 @@ class UpdateUpTItemController extends Controller
 {
     private $_ids               = [];
     private $_pageNames         = [];
+    private $_wrongImages       = [];
     private $_otherPageNames    = [];
     private $_notFoundPageNames = [];
 
@@ -21,8 +22,6 @@ class UpdateUpTItemController extends Controller
         set_time_limit(1000);
         ini_set('memory_limit', '2048M');
         ini_set('max_execution_time', 1000);
-
-        echo '<pr>';
 
         // these files below updated the content add to the BD
         $pcNobodyItemContent    = file_get_contents(resource_path('items/pc-nobody-item-detail.html'));
@@ -42,12 +41,16 @@ class UpdateUpTItemController extends Controller
         // create sql string when count page names < 1000
         $sqlUpdateItems = $this->_getSqlString();
 
+        echo '<pr>';
         echo '<br />';
         var_dump($sqlUpdateItems);
         echo '<br />';
+        echo '<br />';
         var_dump('not found page name');
         echo '<br />';
-        dd($this->_pageNames);
+        var_dump($this->_notFoundPageNames);
+        // dd($this->_pageNames);
+        dd($this->_wrongImages);
         dd($this->_notFoundPageNames);
         echo '</pr>';
     }
@@ -65,15 +68,17 @@ class UpdateUpTItemController extends Controller
     }
 
     /**
-     * Create sql string to insert into DB
+     * Create sql string to update into DB
      *
      * @return string
      */
     private function _getSqlString()
     {
-        $i         = 1;
-        $sql       = 'UPDATE master_item_type SET page_name = CASE id';
-        $stringIds = '';
+        $i           = 1;
+        $stringIds   = '';
+        $pageNameSql = '';
+        $imageUrlSql = '';
+
         foreach ($this->_pageNames as $pageName) {
             $link = sprintf('https://up-t.jp/page.php?p=%s', $pageName);
 
@@ -82,17 +87,37 @@ class UpdateUpTItemController extends Controller
 
                 preg_match('/model_id=([\w\d]*)/i', $pageContent, $ids);
 
-                if (count($ids) == 2) {
-                    var_dump('get content of item ' . $ids[1]);
+                $imageUrls = [
+                    1 => '',
+                    0 => ''
+                ];
+
+                for ($j = 100; $j >= 1; $j--) {
+                    preg_match("/<ul class=\"item_manual_box01 item_detail_set add-list clearfix\">(.*\n.*){1,$j}<\/ul>/mi", $pageContent, $productBox);
+
+                    if (isset($productBox[0])) {
+                        preg_match('/src="([:\w-\/\.]*)"/i', $productBox[0], $imageUrls);
+                        break;
+                    }
+                }
+
+                if (count($ids) == 2 && count($imageUrls) == 2) {
+                    // var_dump('get content of item ' . $ids[1]);
                     $this->_ids[] = $ids[1];
-                    $sql          .= sprintf(" WHEN '%s' THEN '%s'", $ids[1], $pageName);
-                    if ($i == 1) {
-                        $stringIds = sprintf("'%s'", $ids[1]);
-                    } else {
-                        $stringIds .= sprintf(", '%s'", $ids[1]);
+
+                    if ($i != 1) {
+                        $stringIds .= ', ';
+                    }
+
+                    $stringIds   .= sprintf("'%s'", $ids[1]);
+                    $pageNameSql .= sprintf(" WHEN '%s' THEN '%s'", $ids[1], $pageName);
+                    $imageUrlSql .= sprintf(" WHEN '%s' THEN '%s'", $ids[1], $imageUrls[1]);
+
+                    if (empty($imageUrls[1]) || $imageUrls[1] == 'common/design/user/img/item/logo_00085_.png') {
+                        $this->_wrongImages[$ids[1]] = $pageName;
                     }
                 } else {
-                    $this->_notFoundPageNames['not sql ' . $pageName] = $link;
+                    $this->_notFoundPageNames['not found id or image ' . $pageName] = $link;
                 }
             } catch (\Exception $exception) {
                 $this->_notFoundPageNames['not sql ' . $pageName] = $link;
@@ -101,9 +126,7 @@ class UpdateUpTItemController extends Controller
             $i++;
         }
 
-        $sql .= ' ELSE NULL';
-        $sql .= ' END';
-        $sql .= sprintf(' WHERE id IN (%s)', $stringIds);
+        $sql = sprintf('UPDATE master_item_type SET `page_name` = CASE id %s END, `main_image` = CASE id %s END WHERE id IN (%s);', $pageNameSql, $imageUrlSql, $stringIds);
 
         return $sql;
     }
@@ -172,9 +195,11 @@ class UpdateUpTItemController extends Controller
                         if (isset($this->_pageNames[$fileName])) {
 
                         } else {
-//                            $this->_otherPageNames[$fileName] = $fileName;
+                            // $this->_otherPageNames[$fileName] = $fileName;
                             $this->_notFoundPageNames[ ' file not found ' . $fileName . $location] = $file;
                         }
+
+                        $this->_pageNames[$fileName] = $fileName;
                     }
                 }
             }
