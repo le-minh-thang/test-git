@@ -19,9 +19,8 @@ class UpdateUpTItemController extends Controller
      */
     public function update()
     {
-        set_time_limit(1000);
         ini_set('memory_limit', '2048M');
-        ini_set('max_execution_time', 1000);
+        ini_set('max_execution_time', 10000);
 
         // these files below updated the content add to the BD
         $pcNobodyItemContent    = file_get_contents(resource_path('items/pc-nobody-item-detail.html'));
