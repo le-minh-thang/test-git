@@ -9,13 +9,18 @@ use Illuminate\Support\Facades\Input;
 class DiffShowItemController extends Controller
 {
     /**
+     * DiffShowItemController constructor.
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
      * No name
      */
     public function index()
     {
-        ini_set('max_execution_time', 666);
-        set_time_limit(666);
-        ini_set('memory_limit', '2048M');
         $data = Input::all();
         $same = [];
 
@@ -74,9 +79,6 @@ class DiffShowItemController extends Controller
      */
     public function updateDeleteField()
     {
-        ini_set('max_execution_time', 666);
-        set_time_limit(666);
-        ini_set('memory_limit', '2048M');
         $data              = Input::all();
         $productsUpdated   = [];
         $upTDeletedItems   = [];
@@ -197,9 +199,9 @@ class DiffShowItemController extends Controller
         dd('chưa dùng');
         $input = Input::all();
         if (isset($input['data'])) {
-            $input = explode(':', $input['data']);
+            $input                = explode(':', $input['data']);
             $input['product_ids'] = explode(',', str_replace(" ", '', str_replace("'", '', $input['product_ids'])));
-            $products            = Product::where('category_id', $input['category_id'])
+            $products             = Product::where('category_id', $input['category_id'])
                 ->select('id', 'title')
                 ->orderBy('id')
                 ->pluck('title', 'id')->toArray();

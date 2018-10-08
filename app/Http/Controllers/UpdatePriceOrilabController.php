@@ -7,6 +7,11 @@ use App\MasterItemType;
 
 class UpdatePriceOrilabController extends Controller
 {
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -26,9 +31,6 @@ class UpdatePriceOrilabController extends Controller
      */
     public function update()
     {
-        ini_set('max_execution_time', 666);
-        set_time_limit(666);
-        ini_set('memory_limit', '2048M');
         $updatedItems      = [];
         $updatedItemsOther = [];
 

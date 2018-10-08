@@ -20,30 +20,31 @@ use App\UpTPrinttyProductColorSide;
 
 class InsertController extends Controller
 {
+    private $_productIds         = [];
     private $_productPrices      = [];
     private $_printProductPrices = [];
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->_setProductPrices();
     }
 
     /**
      * Display a listing of new items.
      *
+     * @param $test
      * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        ini_set('max_execution_time', 666);
-        set_time_limit(666);
-        ini_set('memory_limit', '2048M');
         try {
             $productInserts                 = [];
             $productSizeInserts             = [];
             $productColorInserts            = [];
-            $productColorSideInserts        = [];
             $printtyProductInserts          = [];
+            $productColorSideInserts        = [];
             $printtyProductSizeInserts      = [];
             $printtyProductColorInserts     = [];
             $printtyProductColorSideInserts = [];
@@ -55,12 +56,13 @@ class InsertController extends Controller
                 'PrinttyProductColorSide' => 'UpTPrinttyProductColorSide',
             ];
 
-            $lastProductId      = Product::orderBy('id', 'desc')->first()->id + 1;
+            // $lastProductId      = Product::orderBy('id', 'desc')->first()->id + 1; (1)
             $lastProductColorId = ProductColor::orderBy('id', 'desc')->first()->id + 1;
 
             $masterItemTypes = MasterItemType::select('name as title', 'item_code as code')
                 ->where('category_id', '>', 0)
-                ->where('id', '<>', 'IT489')
+//                ->where('id', '<>', 'IT489')
+                ->where('id', '>', 'IT524')
                 ->pluck('title', 'code')
                 ->toArray();
 
@@ -78,6 +80,14 @@ class InsertController extends Controller
                     ->where('item_code', $code)
                     ->first();
 
+                // check product id before insert into DB
+                $this->_setProductId($item->id);
+
+                if (!isset($this->_productIds[$item->id])) {
+                    dd('Look like something went wrong!');
+                }
+
+                $lastProductId    = $this->_productIds[$item->id];
                 $productInserts[] = $this->_generateProduct($item, $lastProductId);
                 var_dump("generate the product $lastProductId");
                 $this->_generateProductSizes($productSizeInserts, $lastProductId, $item->itemSizes, $lastProductSizeOrder);
@@ -91,6 +101,7 @@ class InsertController extends Controller
                     $lastProductColorId += 1;
                 }
 
+                // use this when automatically generate $lastProductId base on DB, it was commented at (1)
                 $lastProductId += 1;
             }
 
@@ -105,6 +116,8 @@ class InsertController extends Controller
                     ${lcfirst($printtyProductTableName) . 'Inserts'} = $upTPrinttyProductClass::whereIn('id', $diffPrinttyProducts)->get()->toArray();
                 }
             }
+
+            var_dump($productInserts);
 
             DB::beginTransaction();
 
@@ -173,7 +186,12 @@ class InsertController extends Controller
         $color = 'others';
 
         // White color depend on the white colors were defined on the excel sheet
-        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF' || $itemSub->color == '#edeef0' || $itemSub->color == '#edeef2' || $itemSub->color == '#dfdee3' || $itemSub->color == '#eceff2') {
+        if ($itemSub->color == '#ffffff' || $itemSub->color == '#FFFFFF' || $itemSub->color == '#edeef0' ||
+            $itemSub->color == '#edeef2' || $itemSub->color == '#dfdee3' || $itemSub->color == '#eceff2' ||
+            $itemSub->color == '#EAEBEF' || $itemSub->color == '#EBEAF0' || $itemSub->color == '#F6F6F6' ||
+            $itemSub->color == '#F3F2F0' || $itemSub->color == '#F3F3F3' || $itemSub->color == '#EFEFF1' ||
+            $itemSub->color == '#ecece4'
+        ) {
             $color = 'white';
         }
 
@@ -285,7 +303,7 @@ class InsertController extends Controller
             $categoryId = $item->category_id;
         }
 
-        $prices    = $this->_getProductPrices($item);
+        $prices    = $this->_getProductPrices($lastProductId, $item);
         $price     = $prices['price'];
         $toolPrice = $prices['tool_price'];
 
@@ -314,20 +332,21 @@ class InsertController extends Controller
     /**
      * Get product price and product print price
      *
+     * @param $productId
      * @param $item
      * @return array
      */
-    private function _getProductPrices($item)
+    private function _getProductPrices($productId, $item)
     {
-        if (isset($this->_productPrices[$item->id])) {
-            if (isset($this->_productPrices[$item->id]['price'])) {
-                $price = $this->_productPrices[$item->id]['price'];
+        if (isset($this->_productPrices[$productId])) {
+            if (isset($this->_productPrices[$productId]['price'])) {
+                $price = $this->_productPrices[$productId]['price'];
             } else {
                 $price = $item->item_price;
             }
 
-            if (isset($this->_productPrices[$item->id]['tool_price'])) {
-                $toolPrice = $this->_productPrices[$item->id]['tool_price'];
+            if (isset($this->_productPrices[$productId]['tool_price'])) {
+                $toolPrice = $this->_productPrices[$productId]['tool_price'];
             } else {
                 $toolPrice = $item->tool_price;
             }
@@ -384,8 +403,8 @@ class InsertController extends Controller
             $position = 3;
         }
 
-        if (isset($this->_printProductPrices[$color][$item->id][$position])) {
-            $printPrice = $this->_printProductPrices[$color][$item->id][$position];
+        if (isset($this->_printProductPrices[$color][$this->_productIds[$item->id]][$position])) {
+            $printPrice = $this->_printProductPrices[$color][$this->_productIds[$item->id]][$position];
         }
 
         return $printPrice;
@@ -431,230 +450,172 @@ class InsertController extends Controller
 
     /**
      * Set product and print product prices
+     * Everything is different from add items file
      */
     private function _setProductPrices()
     {
-        // Everything is different from add items file
-
         $this->_productPrices = [
-            'IT476'    => [
-                'price'      => 600,
-                'tool_price' => 1300,
-            ],
-            'IT477'    => [
-                'price'      => 600,
-                'tool_price' => 1300,
-            ],
-            'IT478'    => [
-                'price'      => 1000,
-                'tool_price' => 1900,
-            ],
-            'IT482'    => [
-                'price'      => 1300,
-                'tool_price' => 2100,
-            ], 'IT483' => [
-                'price'      => 1700,
-                'tool_price' => 2500,
-            ], 'IT488' => [
-                'price'      => 700,
+            '409'    => [
+                'price'      => 900,
                 'tool_price' => 1500,
-            ], 'IT489' => [
-                'price'      => 1800,
+            ], '410' => [
+                'price'      => 1000,
+                'tool_price' => 1600,
+            ], '411' => [
+                'price'      => 900,
+                'tool_price' => 1900,
+            ], '412' => [
+                'price'      => 2000,
                 'tool_price' => 2600,
-            ], 'IT490' => [
-                'price'      => 600,
-                'tool_price' => 1400,
-            ], 'IT491' => [
-                'price'      => 1500,
+            ], '414' => [
+                'price'      => 1600,
+                'tool_price' => 2200,
+            ], '415' => [
+                'price'      => 1100,
+                'tool_price' => 1700,
+            ], '416' => [
+                'price'      => 1200,
+                'tool_price' => 1800,
+            ], '417' => [
+                'price'      => 1700,
                 'tool_price' => 2300,
-            ], 'IT493' => [
-                'price' => 1300,
+            ], '419' => [
+                'price'      => 1900,
+                'tool_price' => 2500,
+            ], '420' => [
+                'price'      => 1300,
+                'tool_price' => 1900,
+            ], '425' => [
+                'price'      => 1800,
+                'tool_price' => 3200,
             ],
         ];
 
-        $this->_productPrices['IT479'] = $this->_productPrices['IT478'];
-        $this->_productPrices['IT480'] = $this->_productPrices['IT478'];
-        $this->_productPrices['IT481'] = $this->_productPrices['IT478'];
-        $this->_productPrices['IT484'] = $this->_productPrices['IT482'];
-        $this->_productPrices['IT485'] = $this->_productPrices['IT482'];
-        $this->_productPrices['IT492'] = $this->_productPrices['IT482'];
-        $this->_productPrices['IT495'] = $this->_productPrices['IT482'];
-        $this->_productPrices['IT486'] = $this->_productPrices['IT483'];
-        $this->_productPrices['IT487'] = $this->_productPrices['IT483'];
-        $this->_productPrices['IT494'] = $this->_productPrices['IT483'];
+        $this->_productPrices['413'] = $this->_productPrices['412'];
+        $this->_productPrices['418'] = $this->_productPrices['412'];
+        $this->_productPrices['421'] = $this->_productPrices['410'];
+        $this->_productPrices['422'] = $this->_productPrices['410'];
+        $this->_productPrices['423'] = $this->_productPrices['416'];
+        $this->_productPrices['424'] = $this->_productPrices['409'];
+        $this->_productPrices['426'] = $this->_productPrices['414'];
+        $this->_productPrices['427'] = $this->_productPrices['417'];
+        $this->_productPrices['428'] = $this->_productPrices['415'];
+        $this->_productPrices['429'] = $this->_productPrices['409'];
 
         $this->_printProductPrices = [
             'white'  => [
-                'IT482'    => [
-                    1 => 800,
-                    2 => 800,
-                    3 => 800,
-                ], 'IT483' => [
-                    1 => 800,
-                    2 => 800,
-                ], 'IT488' => [
-                    1 => 800,
-                ],
+                '409'    => [
+                    1 => 600,
+                    2 => 600,
+                    3 => 400,
+                ]
             ],
             'others' => [
-                'IT476'    => [
-                    1 => 700,
-                    2 => 700,
-                ], 'IT478' => [
+                '409'    => [
                     1 => 900,
                     2 => 900,
-                ], 'IT482' => [
-                    1 => 1000,
-                    2 => 1000,
+                    3 => 700,
+                ], '421' => [
+                    1 => 1400,
+                    2 => 1400,
                     3 => 1000,
-                ], 'IT491' => [
-                    1 => 1300,
-                    2 => 1300,
-                    3 => 1000,
-                ], 'IT483' => [
-                    1 => 1000,
-                    2 => 1000,
-                ], 'IT488' => [
-                    1 => 1000,
-                ],
+                ]
             ],
         ];
 
         // White
-        $this->_printProductPrices['white']['IT484'] = $this->_printProductPrices['white']['IT482'];
-        $this->_printProductPrices['white']['IT485'] = $this->_printProductPrices['white']['IT482'];
-        $this->_printProductPrices['white']['IT491'] = $this->_printProductPrices['white']['IT482'];
-        $this->_printProductPrices['white']['IT492'] = $this->_printProductPrices['white']['IT482'];
-        $this->_printProductPrices['white']['IT495'] = $this->_printProductPrices['white']['IT482'];
-        $this->_printProductPrices['white']['IT486'] = $this->_printProductPrices['white']['IT483'];
-        $this->_printProductPrices['white']['IT487'] = $this->_printProductPrices['white']['IT483'];
-        $this->_printProductPrices['white']['IT493'] = $this->_printProductPrices['white']['IT483'];
-        $this->_printProductPrices['white']['IT494'] = $this->_printProductPrices['white']['IT483'];
-        $this->_printProductPrices['white']['IT489'] = $this->_printProductPrices['white']['IT488'];
-        $this->_printProductPrices['white']['IT490'] = $this->_printProductPrices['white']['IT488'];
+        $this->_printProductPrices['white']['410'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['white']['411'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['white']['417'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['white']['418'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['white']['419'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['white']['412'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['413'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['414'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['415'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['416'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['420'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['421'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['422'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['423'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['424'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['426'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['427'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['428'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['429'] = $this->_printProductPrices['white']['409'];
+        $this->_printProductPrices['white']['425'] = $this->_printProductPrices['others']['421'];
 
         // The other colors
-        $this->_printProductPrices['others']['IT477'] = $this->_printProductPrices['others']['IT476'];
-        $this->_printProductPrices['others']['IT479'] = $this->_printProductPrices['others']['IT478'];
-        $this->_printProductPrices['others']['IT480'] = $this->_printProductPrices['others']['IT478'];
-        $this->_printProductPrices['others']['IT481'] = $this->_printProductPrices['others']['IT478'];
-        $this->_printProductPrices['others']['IT484'] = $this->_printProductPrices['others']['IT482'];
-        $this->_printProductPrices['others']['IT485'] = $this->_printProductPrices['others']['IT482'];
-        $this->_printProductPrices['others']['IT492'] = $this->_printProductPrices['others']['IT482'];
-        $this->_printProductPrices['others']['IT495'] = $this->_printProductPrices['others']['IT482'];
-        $this->_printProductPrices['others']['IT486'] = $this->_printProductPrices['others']['IT483'];
-        $this->_printProductPrices['others']['IT487'] = $this->_printProductPrices['others']['IT483'];
-        $this->_printProductPrices['others']['IT493'] = $this->_printProductPrices['others']['IT483'];
-        $this->_printProductPrices['others']['IT494'] = $this->_printProductPrices['others']['IT483'];
-        $this->_printProductPrices['others']['IT489'] = $this->_printProductPrices['others']['IT488'];
-        $this->_printProductPrices['others']['IT490'] = $this->_printProductPrices['others']['IT488'];
+        $this->_printProductPrices['others']['410'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['411'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['412'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['413'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['414'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['415'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['416'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['417'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['418'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['419'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['420'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['426'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['427'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['429'] = $this->_printProductPrices['others']['409'];
+        $this->_printProductPrices['others']['422'] = $this->_printProductPrices['others']['421'];
+        $this->_printProductPrices['others']['423'] = $this->_printProductPrices['others']['421'];
+        $this->_printProductPrices['others']['424'] = $this->_printProductPrices['others']['421'];
+        $this->_printProductPrices['others']['425'] = $this->_printProductPrices['others']['421'];
+        $this->_printProductPrices['others']['428'] = $this->_printProductPrices['others']['421'];
     }
 
-    //    public function insertFromPrintty()
-    //    {
-    //        $printtyProductInserts          = [];
-    //        $printtyProductSizeInserts      = [];
-    //        $printtyProductColorInserts     = [];
-    //        $printtyProductColorSideInserts = [];
-    //
-    //        $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id', 'products_linked_codes.code as product_code')
-    //            ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
-    //            ->where('products_linked_codes.is_deleted', 0)
-    //            ->where('products.id', '>', 320)
-    //            ->pluck('product_code', 'product.id')->toArray();
-    //
-    //        $printtyProducts = PrinttyProduct::select('id', 'product_code')->pluck('product_code', 'id')->toArray();
-    //
-    //        $diffs = array_diff_assoc($printtyPrinttyProducts, $printtyProducts);
-    //
-    //        if (count($diffs)) {
-    //            $printtyPrinttyProducts = \App\PrinttyModels\Product::select('products.id as id', 'products_linked_codes.code as product_code')
-    //                ->join('products_linked_codes', 'products.id', '=', 'products_linked_codes.product_id')
-    //                ->where('products_linked_codes.is_deleted', 0)
-    //                ->where('products.id', '>', 320)
-    //                ->whereIn('products.id', array_flip($diffs))
-    //                ->with([
-    //                    'productSizes',
-    //                    'productColors' => function ($q) {
-    //                        $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors.id', 'products_colors.created_at', 'products_colors.updated_at')
-    //                            ->with([
-    //                                'productColorSides' => function ($q) {
-    //                                    $q->select('products_colors_linked_codes.code as products_color_code', 'products_colors_sides.id', 'products_colors_sides.created_at', 'products_colors_sides.updated_at')
-    //                                        ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id ', '=', 'products_colors_sides.id');
-    //                                },
-    //                            ])
-    //                            ->join('products_colors_linked_codes', 'products_colors_linked_codes.product_color_id', '=', 'products_colors .id');
-    //                    },
-    //                ])
-    //                ->get();
-    //            if ($printtyPrinttyProducts->count()) {
-    //                foreach ($printtyPrinttyProducts as $printtyPrinttyProduct) {
-    //                    $this->_generatePrinttyProduct($printtyPrinttyProduct, $printtyProductInserts);
-    //                    if ($printtyPrinttyProduct->productSizes->count()) {
-    //                        foreach ($printtyPrinttyProduct->productSizes as $printtyProductSize) {
-    //                            $this->_generatePrinttyProductSize($printtyProductSize, $printtyProductSizeInserts, $printtyPrinttyProduct->product_code);
-    //                        }
-    //                    }
-    //
-    //                    if ($printtyPrinttyProduct->productColors->count()) {
-    //                        foreach ($printtyPrinttyProduct->productColors as $printtyProductColor) {
-    //                            $this->_generatePrinttyProductColor($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
-    //
-    //                            if ($printtyProductColor->productColorSides->count()) {
-    //                                foreach ($printtyProductColor->productColorSides as $productColorSide) {
-    //                                    $this->_generatePrinttyProductColorSide($printtyProductColor, $printtyProductColorInserts, $printtyPrinttyProduct->product_code);
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            } else {
-    //                var_dump('Printty product is not found');
-    //            }
-    //        } else {
-    //            var_dump('No diff');
-    //        }
-    //    }
-    //
-    //    private function _generatePrinttyProduct($printtyProduct, &$printtyProductInserts)
-    //    {
-    //        $printtyProductInserts[] = [
-    //            'id'                       => $printtyProduct->id,
-    //            'product_code'             => $printtyProduct->product_code,
-    //            'is_for_nekoposu_delivery' => 0,
-    //        ];
-    //    }
-    //
-    //    private function _generatePrinttyProductSize($printtyProductSize, &$printtyProductSizeInserts, $productCode)
-    //    {
-    //        $printtyProductSizeInserts[] = [
-    //            'id'           => $printtyProductSize->id,
-    //            'product_code' => $productCode,
-    //            'size_name'    => $printtyProductSize->title,
-    //            'created'      => $printtyProductSize->created_at,
-    //            'modified'     => $printtyProductSize->updated_at,
-    //        ];
-    //    }
-    //
-    //    private function _generatePrinttyProductColor($printtyProductColor, &$printtyProductColorInserts, $productCode)
-    //    {
-    //        $printtyProductColorInserts[] = [
-    //            'id'           => $printtyProductColor->id,
-    //            'product_code' => $productCode,
-    //            'size_name'    => $printtyProductColor->title,
-    //            'created'      => $printtyProductColor->created_at,
-    //            'modified'     => $printtyProductColor->updated_at,
-    //        ];
-    //    }
-    //
-    //    private function _generatePrinttyProductColorSide($printtyProductColorSide, &$printtyProductColorSideInserts, $productCode)
-    //    {
-    //        $printtyProductColorSideInserts[] = [
-    //            'id'           => $printtyProductColorSide->id,
-    //            'product_code' => $productCode,
-    //            'size_name'    => $printtyProductColorSide->title,
-    //            'created'      => $printtyProductColorSide->created_at,
-    //            'modified'     => $printtyProductColorSide->updated_at,
-    //        ];
-    //    }
+    /**
+     * Get product id
+     *
+     * @param $itemId
+     */
+    private function _setProductId($itemId)
+    {
+        if ($itemId == 'IT525') {
+            $this->_productIds[$itemId] = 409;
+        } else if ($itemId == 'IT526') {
+            $this->_productIds[$itemId] = 410;
+        } else if ($itemId == 'IT527') {
+            $this->_productIds[$itemId] = 411;
+        } else if ($itemId == 'IT528') {
+            $this->_productIds[$itemId] = 412;
+        } else if ($itemId == 'IT529') {
+            $this->_productIds[$itemId] = 413;
+        } else if ($itemId == 'IT530') {
+            $this->_productIds[$itemId] = 414;
+        } else if ($itemId == 'IT531') {
+            $this->_productIds[$itemId] = 415;
+        } else if ($itemId == 'IT532') {
+            $this->_productIds[$itemId] = 416;
+        } else if ($itemId == 'IT533') {
+            $this->_productIds[$itemId] = 417;
+        } else if ($itemId == 'IT534') {
+            $this->_productIds[$itemId] = 418;
+        } else if ($itemId == 'IT535') {
+            $this->_productIds[$itemId] = 419;
+        } else if ($itemId == 'IT536') {
+            $this->_productIds[$itemId] = 420;
+        } else if ($itemId == 'IT537') {
+            $this->_productIds[$itemId] = 421;
+        } else if ($itemId == 'IT538') {
+            $this->_productIds[$itemId] = 422;
+        } else if ($itemId == 'IT539') {
+            $this->_productIds[$itemId] = 423;
+        } else if ($itemId == 'IT540') {
+            $this->_productIds[$itemId] = 424;
+        } else if ($itemId == 'IT541') {
+            $this->_productIds[$itemId] = 425;
+        } else if ($itemId == 'IT542') {
+            $this->_productIds[$itemId] = 426;
+        } else if ($itemId == 'IT543') {
+            $this->_productIds[$itemId] = 427;
+        } else if ($itemId == 'IT544') {
+            $this->_productIds[$itemId] = 428;
+        } else if ($itemId == 'IT545') {
+            $this->_productIds[$itemId] = 429;
+        }
+    }
 }

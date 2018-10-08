@@ -26,6 +26,8 @@ class UpdateColorController extends Controller
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->_setProductPrices();
     }
 
@@ -36,9 +38,6 @@ class UpdateColorController extends Controller
      */
     public function index()
     {
-        ini_set('max_execution_time', 666);
-        set_time_limit(666);
-        ini_set('memory_limit', '2048M');
         try {
             $productColorInserts            = [];
             $productColorSideInserts        = [];

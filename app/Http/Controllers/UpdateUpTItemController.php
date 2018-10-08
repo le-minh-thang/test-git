@@ -10,6 +10,11 @@ class UpdateUpTItemController extends Controller
     private $_otherPageNames    = [];
     private $_notFoundPageNames = [];
 
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
     /**
      * Update the specified resource in storage.
      *
@@ -19,9 +24,6 @@ class UpdateUpTItemController extends Controller
      */
     public function update()
     {
-        ini_set('memory_limit', '2048M');
-        ini_set('max_execution_time', 10000);
-
         // these files below updated the content add to the BD
         $pcNobodyItemContent    = file_get_contents(resource_path('items/pc-nobody-item-detail.html'));
         $smartNobodyItemContent = file_get_contents(resource_path('items/smart-nobody-item-detail.html'));

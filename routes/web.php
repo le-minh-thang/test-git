@@ -40,3 +40,9 @@ Route::get('check-link', 'InsertController@checkLink')->name('check.link');
 
 // Update Up T Information of Items
 Route::get('updating-items', 'UpdateUpTItemController@update')->name('updateColors');
+
+// update products and color sides
+Route::get('updating-product-color-sides', 'UpdateProductController@update')->name('updateColors');
+
+// update products and color sides price
+Route::get('updating-product-prices', 'UpdateProductController@updatePrice')->name('updateColors');
