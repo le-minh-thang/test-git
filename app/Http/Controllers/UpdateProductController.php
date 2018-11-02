@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class UpdateProductController extends Controller
 {
-    private $_productPrices      = [];
+    private $_productPrices = [];
 
     public function __construct()
     {
@@ -27,7 +27,7 @@ class UpdateProductController extends Controller
     public function update()
     {
         $matches = [];
-        $items   = ['IT201', 'IT203', 'IT205', 'IT209', 'IT211', 'IT295', 'IT296'];
+        $items   = ['IT223', 'IT225', 'IT265', 'IT267'];
 
         try {
             foreach ($items as $itemId) {
@@ -35,22 +35,32 @@ class UpdateProductController extends Controller
                     ->where('id', $itemId)
                     ->first();
 
-                $product = Product::where('title', $masterItemType->title)->where('code', $masterItemType->code)->first();
+                $products = Product::where('title', $masterItemType->title)->where('code', $masterItemType->code)->get();
 
                 foreach ($masterItemType->itemSubs as $itemSub) {
-                    foreach ($product->productColors as $productColor) {
-                        if ($productColor->code == $itemSub->item_code) {
-                            foreach ($itemSub->itemSubSides as $itemSubSide) {
-                                foreach ($productColor->productColorSides as $productColorSide) {
-                                    if ($itemSubSide->title == $productColorSide->title) {
-                                        $productColorSide->content       = $itemSubSide->content;
-                                        $productColorSide->image_url     = $itemSubSide->image_url;
-                                        $productColorSide->preview_url   = $itemSubSide->preview_url;
-                                        $productColorSide->content_print = $itemSubSide->content_print;
+                    foreach ($products as $product) {
+                        foreach ($product->productColors as $productColor) {
+                            if ($productColor->code == $itemSub->item_code) {
+                                foreach ($itemSub->itemSubSides as $itemSubSide) {
+                                    foreach ($productColor->productColorSides as $productColorSide) {
+                                        if ($itemSubSide->title == $productColorSide->title) {
+                                            $matches[] = [
+                                                'category'    => $product->category_id,
+                                                'name'        => $product->title,
+                                                'old_preview' => $productColorSide->preview_url,
+                                                'new_preview' => $itemSubSide->preview_url,
+                                                'old_picture' => $productColorSide->image_url,
+                                                'new_picture' => $itemSubSide->image_url,
+                                                'message'     => sprintf('item: %s, color: %s (code: %s), color side: %s', $product->id, $productColor->id, $productColor->code, $productColorSide->id),
+                                            ];
 
-                                        $productColorSide->save();
+                                            $productColorSide->content       = $itemSubSide->content;
+                                            $productColorSide->image_url     = $itemSubSide->image_url;
+                                            $productColorSide->preview_url   = $itemSubSide->preview_url;
+                                            $productColorSide->content_print = $itemSubSide->content_print;
 
-                                        $matches[] = sprintf('item: %s, color: %s (code: %s), color side: %s', $product->id, $productColor->id, $productColor->code, $productColorSide->id);
+                                            $productColorSide->save();
+                                        }
                                     }
                                 }
                             }
@@ -78,7 +88,7 @@ class UpdateProductController extends Controller
 
                 $product = Product::where('id', $productId)->first();
 
-                $product->price = $prices['price'];
+                $product->price      = $prices['price'];
                 $product->tool_price = $prices['tool_price'];
 
                 $product->save();

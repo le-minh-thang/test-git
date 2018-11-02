@@ -31,6 +31,7 @@ Route::get('short-diff-product', 'DiffShowItemController@shortDiffProducts')->na
 
 // Change up-t connection to orilab connection
 Route::get('get-orilabo-price', 'UpdatePriceOrilabController@index')->name('get.price.orilab');
+Route::get('update-orilabo-prices-by-ids', 'UpdatePriceOrilabController@updatePriceByIds')->name('update.prices');
 Route::post('update-orilabo-price', 'UpdatePriceOrilabController@update')->name('update.price.orilab');
 
 Route::get('update-nobori', 'GenerateDataForImportWPController@updateNobori')->name('update.nobori');

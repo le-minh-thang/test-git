@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\OrilabMasterItemType;
 use DB;
 use App\MasterItemType;
 
@@ -38,19 +39,17 @@ class UpdatePriceOrilabController extends Controller
             DB::beginTransaction();
             \Excel::load('C:\Users\Admin\Downloads\test.xlsx', function ($reader) use (&$updatedItems, &$updatedItemsOther) {
                 $reader->each(function ($data) use (&$updatedItems, &$updatedItemsOther) {
-                    $name = $data->name;
-                    $nameOther = str_replace('T', 'Ｔ', $data->name);
+                    $name         = $data->name;
+                    $nameOther    = str_replace('T', 'Ｔ', $data->name);
                     $nameTheOther = str_replace('Ｔ', 'T', $data->name);
-                    $item = MasterItemType::where(function ($q) use ($name, $nameOther, $nameTheOther) {
+                    $item         = MasterItemType::where(function ($q) use ($name, $nameOther, $nameTheOther) {
                         $q->where('name', $name)->orWhere('name', $nameOther)->orWhere('name', $nameTheOther);
                     })->where('item_code_nominal', 'like', "%{$data->code}%")->with('itemSubs')->first();
 
                     if ($item) {
                         $this->updateItem($item, $data);
                         $updatedItems[]               = [
-                            'color'     => $data->color,
-                            'name_code' => $item->name . ' - ' . $item->item_code_nominal,
-                            'price'     => $data->body,
+                            'color' => $data->color, 'name_code' => $item->name . ' - ' . $item->item_code_nominal, 'price' => $data->body,
                         ];
                         $updatedItemsOther[$item->id] = $item->name;
                         $this->updateItemSubs($item->itemSubs, $data);
@@ -103,5 +102,98 @@ class UpdatePriceOrilabController extends Controller
                 $itemSub->save();
             }
         }
+    }
+
+    public function updatePriceByIds()
+    {
+        $matches    = [];
+        $notMatches = [];
+        $ids        = [
+            'IT001', 'IT003', 'IT004', 'IT006', 'IT063', 'IT064', 'IT011', 'IT013', 'IT073',
+            'IT031', 'IT036', 'IT039', 'IT032', 'IT034', 'IT058', 'IT041', 'IT103', 'IT104',
+            'IT116', 'IT124', 'IT322', 'IT323', 'IT357', 'IT358', 'IT377', 'IT367', 'IT392',
+            'IT393', 'IT442', 'IT443', 'IT445', 'IT448', 'IT449', 'IT450', 'IT451', 'IT452',
+            'IT453', 'IT454', 'IT455', 'IT456', 'IT457', 'IT458', 'IT459', 'IT460', 'IT461',
+            'IT462', 'IT497', 'IT498', 'IT499', 'IT489', 'IT579',
+        ];
+
+        try {
+            DB::beginTransaction();
+
+            $masterItemTypes = MasterItemType::with('itemSubs')
+                ->whereIn('id', $ids)
+                ->get();
+
+            foreach ($masterItemTypes as $masterItemType) {
+                $orilabMasterItemType = OrilabMasterItemType::with('itemSubs')->find($masterItemType->id);
+
+                if ($orilabMasterItemType) {
+                    $matches[$masterItemType->id] = [
+                        'name'   => $masterItemType->name,
+                        'master' => [
+                            'tool_price' => $masterItemType->tool_price,
+                            'item_price' => $masterItemType->item_price,
+                        ],
+                        'orilab' => [
+                            'tool_price' => $orilabMasterItemType->tool_price,
+                            'item_price' => $orilabMasterItemType->item_price,
+                        ],
+                    ];
+
+                    $orilabMasterItemType->tool_price = $masterItemType->tool_price;
+                    $orilabMasterItemType->item_price = $masterItemType->item_price;
+
+                    //$orilabMasterItemType->save();
+
+                    foreach ($masterItemType->itemSubs as $itemSub) {
+                        $i = 1;
+
+                        foreach ($orilabMasterItemType->itemSubs as $orilabItemSub) {
+                            if ($itemSub->id == $orilabItemSub->id) {
+                                $matches[$masterItemType->id]['items'][] = [
+                                    'master' => [
+                                        'cost1' => $itemSub->cost1,
+                                        'cost2' => $itemSub->cost2,
+                                        'cost3' => $itemSub->cost3,
+                                    ],
+                                    'orilab' => [
+                                        'cost1' => $orilabItemSub->cost1,
+                                        'cost2' => $orilabItemSub->cost2,
+                                        'cost3' => $orilabItemSub->cost3,
+                                    ],
+                                ];
+
+                                $orilabItemSub->cost1 = $itemSub->cost1;
+                                $orilabItemSub->cost2 = $itemSub->cost2;
+                                $orilabItemSub->cost3 = $itemSub->cost3;
+
+                                //$orilabItemSub->save();
+
+                                break;
+                            }
+                        }
+
+                        ++$i;
+
+                        if ($i == count($masterItemType->itemSubs) && count($masterItemType->itemSubs) != $matches[$masterItemType->id]['items']) {
+                            $notMatches[$masterItemType->id][] = 'item sub is different';
+                        }
+                    }
+                } else {
+                    $notMatches[$masterItemType->id] = $masterItemType->name;
+                }
+            }
+
+            DB::commit();
+        } catch (\Exception $exception) {
+            DB::rollBack();
+            var_dump("something went wrong");
+            dd($exception);
+        }
+
+        echo '<pre>';
+        print_r($notMatches);
+        echo '</pre>';
+        dd($matches);
     }
 }
