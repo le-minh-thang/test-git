@@ -47,3 +47,6 @@ Route::get('updating-product-color-sides', 'UpdateProductController@update')->na
 
 // update products and color sides price
 Route::get('updating-product-prices', 'UpdateProductController@updatePrice')->name('updateColors');
+
+// Updating search_word of users
+Route::get('updating-search-word-of-users', 'UpdateSearchWordController@update')->name('users.update.searchWords');
