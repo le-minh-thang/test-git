@@ -50,3 +50,6 @@ Route::get('updating-product-prices', 'UpdateProductController@updatePrice')->na
 
 // Updating search_word of users
 Route::get('updating-search-word-of-users', 'UpdateSearchWordController@update')->name('users.update.searchWords');
+
+// update products and color sides belongs to Budgets
+Route::get('updating-platform-product-prices', 'UpdateBudgetPlatformProductPriceController@update')->name('update.platform');

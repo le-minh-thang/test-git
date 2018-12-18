@@ -13,7 +13,7 @@ class Controller extends BaseController
 
     public function __construct()
     {
-        ini_set('max_execution_time', 666);
+        ini_set('max_execution_time', 666666);
         ini_set('memory_limit', '2048M');
     }
 }
