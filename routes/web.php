@@ -34,6 +34,9 @@ Route::get('get-orilabo-price', 'UpdatePriceOrilabController@index')->name('get.
 Route::get('update-orilabo-prices-by-ids', 'UpdatePriceOrilabController@updatePriceByIds')->name('update.prices');
 Route::post('update-orilabo-price', 'UpdatePriceOrilabController@update')->name('update.price.orilab');
 
+Route::get('get-budget-price', 'UpdatePriceBudgetController@index')->name('get.price.budget');
+Route::post('update-budget-price', 'UpdatePriceBudgetController@update')->name('update.price.budget');
+
 Route::get('update-nobori', 'GenerateDataForImportWPController@updateNobori')->name('update.nobori');
 
 // Something doesn't relate to this. It has just been found a active link

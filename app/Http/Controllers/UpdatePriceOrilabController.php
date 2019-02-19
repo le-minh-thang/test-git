@@ -40,10 +40,10 @@ class UpdatePriceOrilabController extends Controller
             \Excel::load('C:\Users\Admin\Downloads\test.xlsx', function ($reader) use (&$updatedItems, &$updatedItemsOther) {
                 $reader->each(function ($data) use (&$updatedItems, &$updatedItemsOther) {
                     $name         = $data->name;
-                    $nameOther    = str_replace('T', 'Ｔ', $data->name);
-                    $nameTheOther = str_replace('Ｔ', 'T', $data->name);
-                    $item         = MasterItemType::where(function ($q) use ($name, $nameOther, $nameTheOther) {
-                        $q->where('name', $name)->orWhere('name', $nameOther)->orWhere('name', $nameTheOther);
+                    $otherName    = str_replace('T', 'Ｔ', $data->name);
+                    $theOtherName = str_replace('Ｔ', 'T', $data->name);
+                    $item         = MasterItemType::where(function ($q) use ($name, $otherName, $theOtherName) {
+                        $q->where('name', $name)->orWhere('name', $otherName)->orWhere('name', $theOtherName);
                     })->where('item_code_nominal', 'like', "%{$data->code}%")->with('itemSubs')->first();
 
                     if ($item) {
