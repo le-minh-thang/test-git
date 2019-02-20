@@ -51,7 +51,7 @@ class UpdatePriceBudgetController extends Controller
                                  },
                              ])->get();
 
-                    if ($items) {
+                    if (count($items)) {
                         foreach ($items as $item) {
                             $sidePrices = $item->itemSubs->first()->toArray();
                             unset($sidePrices['item_type']);
