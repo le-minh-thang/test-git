@@ -12,7 +12,7 @@ class ProductColorSide extends Model
      *
      * @var string
      */
-    protected $table = 'products_colors_sides';
+    protected $table = 'master_item_type_sub_sides';
 
      protected $guarded = [];
 }

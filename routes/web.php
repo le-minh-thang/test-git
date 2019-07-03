@@ -16,6 +16,7 @@ Route::get('/', function () {
 });
 
 Route::get('insert', 'InsertController@index')->name('insert');
+Route::get('mapping-items', 'InsertController@mappingItems')->name('mappingItems');
 Route::get('updating-colors', 'UpdateColorController@index')->name('updateColors');
 Route::get('generate-product-for-import-wp', 'GenerateDataForImportWPController@generateProducts')->name('generateDataGenerateProductsImportWP');
 //Route::get('insert-from-printty', 'InsertController@insertFromPrintty')->name('insertFromPrintty');

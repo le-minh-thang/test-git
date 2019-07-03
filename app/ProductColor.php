@@ -12,7 +12,7 @@ class ProductColor extends Model
      *
      * @var string
      */
-    protected $table = 'products_colors';
+    protected $table = 'master_item_type_sub';
 
      protected $guarded = [];
 

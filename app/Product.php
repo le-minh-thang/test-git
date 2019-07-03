@@ -12,7 +12,7 @@ class Product extends Model
      *
      * @var string
      */
-    protected $table = 'products';
+    protected $table = 'master_item_type';
 
     protected $guarded = [];
 
